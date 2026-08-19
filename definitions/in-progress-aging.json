@@ -1,0 +1,23 @@
+{
+  "project": "contenthub-dev",
+  "order": 20,
+  "measure_status": "In Progress",
+  "additional_filter": "is:open -type:Epic,Feature",
+  "bin_days": 1,
+  "max_bars": 14,
+  "threshold_days": 14,
+  "batch_min": 4,
+  "copy": {
+    "title": "Work In Flight",
+    "headline": "How long has each ticket been in progress?",
+    "lede": "Every open issue a developer has picked up and not yet finished, aged from the moment it last moved into In Progress. This is the one column where a long wait usually means something other than queueing. The work is already assigned, so age points at scope, blockers, or context-switching.",
+    "stat_noun": "open issues in progress",
+    "chart_title": "Distribution of time in progress",
+    "table_title": "Every ticket, longest running first",
+    "notes": [
+      "**Work here should finish inside one sprint.** Two calendar weeks is the yardstick, so the day-by-day bars cover that window and everything past it collapses into one bucket. The question this chart answers is not how old the oldest ticket is, but how much work has overrun the sprint it was picked up in.",
+      "**Read the tail, not the median.** Active work is expected to clear in days, so the interesting tickets are the ones open long enough to suggest they are larger than they looked, blocked on something unrecorded, or set down and not picked back up."
+    ],
+    "chart_sub": "One bar per day for the first two weeks, then a single bucket for everything that has run longer. Hover a bar for the tickets inside it."
+  }
+}

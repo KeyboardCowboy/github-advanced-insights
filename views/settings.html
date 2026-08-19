@@ -1,0 +1,569 @@
+<title>Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&display=swap">
+
+<style>
+  /* Tokens duplicated from views/ticket-aging.html rather than shared through a
+     stylesheet: that template has to stay a single self-contained file so it can
+     be published as an artifact, where external CSS is blocked. This page is
+     app-only and never published, so it carries just the subset it needs. */
+  :root {
+    --font-sans: "Mona Sans", "Mona Sans VF", -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    color-scheme: light;
+    --page: #f4f5f6;  --surface: #fcfcfb;  --surface-2: #f0f2f4;
+    --border: #dde1e5; --ink: #12161c;     --ink-2: #545d69;  --ink-3: #838c97;
+    --series: #2a78d6; --good: #1a7f45;    --bad: #b9331f;
+    --shadow: 0 1px 2px rgba(18, 22, 28, .06), 0 8px 24px -12px rgba(18, 22, 28, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #101113; --surface: #1a1a19; --surface-2: #232421;
+      --border: #33342f; --ink: #f3f3f1;   --ink-2: #b0b3ab;  --ink-3: #7f837c;
+      --series: #3987e5; --good: #3fb950;  --bad: #e07a68;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #101113; --surface: #1a1a19; --surface-2: #232421;
+    --border: #33342f; --ink: #f3f3f1;   --ink-2: #b0b3ab;  --ink-3: #7f837c;
+    --series: #3987e5; --good: #3fb950;  --bad: #e07a68;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+
+  body {
+    background: var(--page); color: var(--ink); font-family: var(--font-sans);
+    line-height: 1.55; margin: 0; padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 32px);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+  .masthead { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  h1 {
+    font-size: clamp(30px, 4.2vw, 40px); font-weight: 700; line-height: 1.15;
+    letter-spacing: -.015em; margin: 0 0 10px;
+  }
+  .metric-def { font-size: 14.5px; color: var(--ink-2); margin: 0; }
+  .backlink {
+    display: inline-block; margin-top: 12px; font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--series); text-decoration: none;
+  }
+  .backlink:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow);
+  }
+  h2 { font-size: 21px; font-weight: 600; margin: 0 0 5px; letter-spacing: -.01em; }
+  h3 { font-size: 16.5px; font-weight: 600; margin: 0 0 5px; letter-spacing: -.005em; }
+  .card-sub { color: var(--ink-2); font-size: 13.5px; margin: 0 0 22px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 18px; }
+  label {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  input, select {
+    font: inherit; font-size: 14.5px; color: var(--ink);
+    background: var(--page); border: 1px solid var(--border);
+    border-radius: 5px; padding: 8px 11px; width: 100%; box-sizing: border-box;
+  }
+  input:focus, select:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .hint { font-size: 12.5px; color: var(--ink-3); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+  button {
+    font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer;
+    border-radius: 5px; padding: 8px 16px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--ink);
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-3); }
+  button:disabled { cursor: progress; opacity: .6; }
+  button.primary { background: var(--series); border-color: var(--series); color: #fff; }
+  button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+  .result {
+    margin-top: 16px; padding: 11px 13px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid var(--border); background: var(--surface-2);
+  }
+  .result[hidden] { display: none; }
+  .result.ok { border-color: var(--good); color: var(--good); }
+  .result.err { border-color: var(--bad); color: var(--bad); }
+  .result ul { margin: 6px 0 0; padding-left: 18px; }
+  .result code { font-family: var(--font-mono); font-size: .92em; }
+
+  .project {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 18px; margin-bottom: 14px; background: var(--page);
+  }
+  .project-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .project.is-new { border-color: var(--series); box-shadow: 0 0 0 3px rgba(42, 120, 214, .12); }
+  .project.is-new .project-title { color: var(--series); }
+  button.force { margin-top: 8px; font-size: 12.5px; padding: 5px 12px; }
+  .project-title { margin: 0; }
+  .uses {
+    font-size: 12.5px; color: var(--ink-3); margin: 0 0 14px;
+    font-family: var(--font-mono);
+  }
+  button.remove { color: var(--bad); }
+  .board-results { margin: -6px 0 14px; display: flex; flex-direction: column; gap: 2px; }
+  .board-results:empty { display: none; }
+  .board-hit {
+    text-align: left; font: inherit; font-size: 13px; cursor: pointer;
+    background: transparent; border: 1px solid transparent; border-radius: 4px;
+    padding: 6px 9px; color: var(--ink-2);
+  }
+  .board-hit:hover { background: var(--surface-2); border-color: var(--border); color: var(--ink); }
+  .board-hit .num { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 4px; }
+  th {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+    text-align: left; padding: 0 10px 8px 0; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--border); color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.slug { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+  .badge {
+    font-family: var(--font-mono); font-size: 10.5px; padding: 1px 6px;
+    border-radius: 3px; background: var(--surface-2); color: var(--ink-3);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1>Settings</h1>
+    <p class="metric-def">
+      Named Projects v2 boards. Each report is written against one board's status
+      vocabulary, so every report names the project it reads. No repository is
+      stored: a board can span several, and issues are fetched by id.
+    </p>
+    <a class="backlink" href="/">&larr; Back to reports</a>
+  </header>
+
+  <section class="card">
+    <h2>Accounts</h2>
+    <p class="card-sub">
+      Where each project's credential comes from. An account records a
+      <em>source</em>, never a token: this file is committed. Leave both fields empty to
+      use whichever account <code>gh</code> is currently logged in as.
+    </p>
+    <div id="account-list"></div>
+    <div class="actions"><button type="button" id="add-account">Add an account</button></div>
+  </section>
+
+  <section class="card">
+    <h2>Projects</h2>
+    <p class="card-sub">
+      Saved to <code>projects.json</code>, which is committed so a teammate
+      gets it on clone. Data is read with your <code>gh</code> credentials; nothing here
+      stores a token.
+    </p>
+    <div id="project-list"></div>
+    <div class="actions">
+      <button type="button" id="add">Add a project</button>
+    </div>
+  </section>
+</div>
+
+<template id="account-template">
+  <form class="project">
+    <div class="project-head">
+      <h3 class="project-title"></h3>
+      <span class="badge default-badge" hidden>default</span>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Account id</label>
+        <input name="id" autocomplete="off" spellcheck="false" required>
+        <span class="hint id-hint">Referenced by each project.</span>
+      </div>
+      <div class="field">
+        <label>Label</label>
+        <input name="label" autocomplete="off">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>gh account</label>
+        <input name="gh_account" autocomplete="off" spellcheck="false"
+               placeholder="e.g. KeyboardCowboy">
+        <span class="hint">Retrieved with <code>gh auth token --user</code>.</span>
+      </div>
+      <div class="field">
+        <label>or environment variable</label>
+        <input name="token_env" autocomplete="off" spellcheck="false"
+               placeholder="e.g. GH_TOKEN_WORK">
+        <span class="hint">For CI, or without <code>gh</code> installed.</span>
+      </div>
+    </div>
+    <p class="uses"></p>
+    <div class="actions">
+      <button type="submit" class="primary">Save</button>
+      <button type="button" class="test">Test account</button>
+      <button type="button" class="remove">Delete</button>
+    </div>
+    <div class="result" hidden></div>
+  </form>
+</template>
+
+<template id="project-template">
+  <form class="project">
+    <div class="project-head">
+      <h3 class="project-title"></h3>
+      <span class="badge default-badge" hidden>default</span>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Project id</label>
+        <input name="id" autocomplete="off" spellcheck="false" required>
+        <span class="hint id-hint">Referenced by each report. Lowercase and hyphens.</span>
+      </div>
+      <div class="field">
+        <label>Label</label>
+        <input name="label" autocomplete="off">
+        <span class="hint">A readable name for this board.</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Owner</label>
+        <input name="owner" autocomplete="off" spellcheck="false" required>
+        <span class="hint">The organization or user that owns the board.</span>
+      </div>
+      <div class="field">
+        <label>Owner type</label>
+        <select name="owner_type">
+          <option value="organization">Organization</option>
+          <option value="user">User</option>
+        </select>
+        <span class="hint">Wrong choice is an error, not an empty result.</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Account</label>
+        <select name="account"></select>
+        <span class="hint">Whose credential reads this board.</span>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Project number</label>
+        <input name="project_number" type="number" min="1" step="1" required>
+        <span class="hint">From the board URL, or search below.</span>
+      </div>
+      <div class="field">
+        <label>Find a project</label>
+        <input class="board-search" autocomplete="off" placeholder="Search by title">
+        <span class="hint">An owner can have hundreds of boards.</span>
+      </div>
+      <div class="field">
+        <label>Repositories</label>
+        <p class="hint repos">Test the project to see which repositories it covers.</p>
+      </div>
+    </div>
+
+    <div class="board-results"></div>
+    <p class="uses"></p>
+
+    <div class="actions">
+      <button type="submit" class="primary">Save</button>
+      <button type="button" class="test">Test project</button>
+      <button type="button" class="remove">Delete</button>
+    </div>
+    <div class="result" hidden></div>
+  </form>
+</template>
+
+<script>
+(() => {
+  const list = document.getElementById("project-list");
+  const template = document.getElementById("project-template");
+  const FIELDS = ["id", "label", "owner", "owner_type", "project_number"];
+
+  const escapeHtml = t => String(t).replace(/[&<>"]/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  /** Values as typed, so Test checks the form rather than what is saved. */
+  function readForm(form) {
+    const values = {};
+    for (const name of FIELDS) values[name] = form.elements[name].value.trim();
+    values.project_number =
+      values.project_number === "" ? null : Number(values.project_number);
+    return values;
+  }
+
+  function showResult(form, kind, html) {
+    const box = form.querySelector(".result");
+    box.className = `result ${kind}`;
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
+  function renderProject(project, isDefault, isNew) {
+    const form = template.content.firstElementChild.cloneNode(true);
+    form.querySelector(".project-title").textContent =
+      isNew ? "New project" : (project.label || project.id);
+    if (isNew) form.classList.add("is-new");
+    form.querySelector(".default-badge").hidden = !isDefault;
+
+    for (const name of FIELDS) {
+      if (project[name] !== undefined && project[name] !== null) {
+        form.elements[name].value = project[name];
+      }
+    }
+    // The id is referenced by every report that uses this project, so it is
+    // fixed once saved. Renaming would orphan those references silently.
+    form.elements.id.readOnly = !isNew;
+    if (!isNew) form.querySelector(".id-hint").textContent = "Fixed once saved.";
+
+    const accountSelect = form.elements.account;
+    accountSelect.innerHTML = '<option value="">Default account</option>'
+      + knownAccounts.map(a =>
+          `<option value="${escapeHtml(a.id)}">${escapeHtml(a.label || a.id)}</option>`).join("");
+    accountSelect.value = project.account || "";
+
+    // Board picker: an owner can have hundreds of projects, so this searches
+    // rather than listing. Choosing a hit fills in the number.
+    const search = form.querySelector(".board-search");
+    const results = form.querySelector(".board-results");
+    let searchTimer;
+    search.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async () => {
+        const owner = form.elements.owner.value.trim();
+        if (!owner || !search.value.trim()) { results.innerHTML = ""; return; }
+        const query = new URLSearchParams({
+          owner, type: form.elements.owner_type.value,
+          q: search.value.trim(), account: accountSelect.value
+        });
+        const response = await fetch(`/api/boards/search?${query}`);
+        if (!response.ok) { results.innerHTML = ""; return; }
+        const payload = await response.json();
+        results.innerHTML = payload.projects.map(b =>
+          `<button type="button" class="board-hit" data-number="${b.number}">`
+          + `<span class="num">#${b.number}</span> ${escapeHtml(b.title)}</button>`).join("")
+          || '<p class="hint">No matching projects.</p>';
+        results.querySelectorAll(".board-hit").forEach(hit =>
+          hit.addEventListener("click", () => {
+            form.elements.project_number.value = hit.dataset.number;
+            results.innerHTML = "";
+            search.value = "";
+          }));
+      }, 350);
+    });
+
+    const uses = project.reports || [];
+    form.querySelector(".uses").textContent = isNew
+      ? "No reports use this yet."
+      : `${uses.length} report(s): ${uses.join(", ") || "none"}`;
+
+    // A stale Test or Save message must not sit beside edited fields.
+    form.addEventListener("input", () => { form.querySelector(".result").hidden = true; });
+
+    form.querySelector(".test").addEventListener("click", async () => {
+      const button = form.querySelector(".test");
+      button.disabled = true;
+      showResult(form, "", "Checking...");
+      const response = await fetch("/api/projects/test", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(readForm(form))
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        showResult(form, "err", escapeHtml(payload.message || "Could not reach that board."));
+      } else {
+        let html = `Reached <strong>${escapeHtml(payload.title)}</strong>, `
+          + `${payload.item_count} items, ${payload.status_count} statuses.`;
+        const repos = form.querySelector(".repos");
+        if (repos && payload.repositories) {
+          repos.textContent = payload.repositories.join(", ") || "none linked";
+        }
+        if (payload.incompatible.length) {
+          // The whole reason projects are named: repointing a board can
+          // invalidate every report written against the old one.
+          html += `<br>Reports that would stop returning data:<ul>`
+            + payload.incompatible.map(r =>
+                `<li><code>${escapeHtml(r.slug)}</code> needs status `
+                + `"${escapeHtml(r.status)}", which this board does not have.</li>`).join("")
+            + `</ul>`;
+          showResult(form, "err", html);
+        } else {
+          showResult(form, "ok", html);
+        }
+      }
+      button.disabled = false;
+    });
+
+    async function save(force) {
+      const values = { ...readForm(form), force };
+      const response = await fetch(`/api/projects/${encodeURIComponent(values.id)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+      const payload = await response.json();
+
+      if (response.ok) {
+        await load();
+        // load() replaces every form, so the confirmation goes on the fresh one.
+        const saved = [...document.querySelectorAll(".project")]
+          .find(f => f.elements.id.value === values.id);
+        if (saved) showResult(saved, "ok", "Saved.");
+        return;
+      }
+
+      if (payload.error === "would_break_reports") {
+        // Repointing a board at one whose statuses these reports do not use is
+        // the exact failure this model exists to prevent, so it takes a second,
+        // deliberate click rather than a silent write.
+        showResult(form, "err",
+          `${escapeHtml(payload.message)}<ul>`
+          + payload.incompatible.map(r =>
+              `<li><code>${escapeHtml(r.slug)}</code> needs status `
+              + `"${escapeHtml(r.status)}".</li>`).join("")
+          + `</ul><button type="button" class="force">Save anyway</button>`);
+        form.querySelector(".force").addEventListener("click", () => save(true));
+        return;
+      }
+
+      const problems = payload.problems || [payload.message || "Could not save."];
+      showResult(form, "err", "Not saved:<ul>"
+        + problems.map(p => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>");
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      save(false);
+    });
+
+    form.querySelector(".remove").addEventListener("click", async () => {
+      if (isNew) return form.remove();
+      const response = await fetch(`/api/projects/${encodeURIComponent(project.id)}`,
+        { method: "DELETE" });
+      const payload = await response.json();
+      if (response.ok) { load(); } else {
+        showResult(form, "err", escapeHtml(payload.message || "Could not delete."));
+      }
+    });
+
+    return form;
+  }
+
+  // ---- accounts --------------------------------------------------------
+  const accountTemplate = document.getElementById("account-template");
+  const accountList = document.getElementById("account-list");
+  const ACCOUNT_FIELDS = ["id", "label", "gh_account", "token_env"];
+  let knownAccounts = [];
+
+  function renderAccount(account, isDefault, isNew) {
+    const form = accountTemplate.content.firstElementChild.cloneNode(true);
+    form.querySelector(".project-title").textContent =
+      isNew ? "New account" : (account.label || account.id);
+    form.querySelector(".default-badge").hidden = !isDefault;
+    if (isNew) form.classList.add("is-new");
+
+    for (const name of ACCOUNT_FIELDS) {
+      if (account[name]) form.elements[name].value = account[name];
+    }
+    form.elements.id.readOnly = !isNew;
+    if (!isNew) form.querySelector(".id-hint").textContent = "Fixed once saved.";
+
+    const uses = account.projects || [];
+    form.querySelector(".uses").textContent = isNew
+      ? "No projects use this yet."
+      : `${uses.length} project(s): ${uses.join(", ") || "none"} | ${account.source || ""}`;
+
+    form.addEventListener("input", () => { form.querySelector(".result").hidden = true; });
+
+    form.querySelector(".test").addEventListener("click", async () => {
+      showResult(form, "", "Checking...");
+      const response = await fetch(
+        `/api/accounts/${encodeURIComponent(form.elements.id.value)}/test`, { method: "POST" });
+      const payload = await response.json();
+      // Naming the resolved login matters: a misconfigured account silently
+      // falls back to the active gh login, which otherwise looks like success.
+      showResult(form, response.ok ? "ok" : "err", response.ok
+        ? `Resolved to <strong>${escapeHtml(payload.login)}</strong> `
+          + `via ${escapeHtml(payload.source)}. ${payload.rate_remaining} API points left.`
+        : escapeHtml(payload.message || "Could not resolve a token."));
+    });
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      const values = {};
+      for (const name of ACCOUNT_FIELDS) values[name] = form.elements[name].value.trim();
+      const response = await fetch(`/api/accounts/${encodeURIComponent(values.id)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+      const payload = await response.json();
+      if (response.ok) { load(); }
+      else {
+        const problems = payload.problems || [payload.message || "Could not save."];
+        showResult(form, "err", "Not saved:<ul>"
+          + problems.map(p => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>");
+      }
+    });
+
+    form.querySelector(".remove").addEventListener("click", async () => {
+      if (isNew) return form.remove();
+      const response = await fetch(`/api/accounts/${encodeURIComponent(account.id)}`,
+        { method: "DELETE" });
+      if (response.ok) { load(); }
+      else { showResult(form, "err", escapeHtml((await response.json()).message)); }
+    });
+
+    return form;
+  }
+
+  document.getElementById("add-account").addEventListener("click", () => {
+    const form = renderAccount({}, false, true);
+    accountList.appendChild(form);
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+    form.elements.id.focus();
+  });
+
+  async function load() {
+    const accountDoc = await (await fetch("/api/accounts")).json();
+    knownAccounts = accountDoc.accounts;
+    accountList.innerHTML = knownAccounts.length ? "" :
+      '<p class="card-sub">No accounts yet. Without one, the active gh login is used.</p>';
+    for (const account of knownAccounts) {
+      accountList.appendChild(
+        renderAccount(account, account.id === accountDoc.default_account, false));
+    }
+
+    const document_ = await (await fetch("/api/projects")).json();
+    list.innerHTML = "";
+    if (!document_.projects.length) {
+      list.innerHTML = '<p class="card-sub">No projects yet. Add one to get started.</p>';
+    }
+    for (const project of document_.projects) {
+      list.appendChild(renderProject(
+        project, project.id === document_.default_project, false));
+    }
+  }
+
+  document.getElementById("add").addEventListener("click", () => {
+    const form = renderProject({ owner_type: "organization" }, false, true);
+    list.appendChild(form);
+    form.scrollIntoView({ behavior: "smooth", block: "center" });
+    form.elements.id.focus();
+  });
+
+  load();
+})();
+</script>

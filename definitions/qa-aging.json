@@ -1,0 +1,21 @@
+{
+  "project": "contenthub-dev",
+  "order": 50,
+  "measure_status": "Ready for QA",
+  "additional_filter": "is:open -type:Epic,Feature",
+  "bin_days": 7,
+  "max_bars": null,
+  "threshold_days": 30,
+  "batch_min": 4,
+  "copy": {
+    "title": "Waiting for QA",
+    "headline": "How long has each ticket been waiting for QA?",
+    "lede": "Every open issue currently sitting in Ready for QA on the dev board, aged from the moment it last moved into that column. Earlier trips through QA are excluded, so this measures the current, unbroken wait.",
+    "stat_noun": "open issues in Ready for QA",
+    "chart_title": "Distribution of current QA wait",
+    "table_title": "Every ticket, oldest first",
+    "notes": [
+      "**A long wait here is a finished-work problem, not a backlog problem.** Everything in this column has been built and peer-reviewed; the cost of it sitting is work that is done but not yet shippable."
+    ]
+  }
+}

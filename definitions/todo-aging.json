@@ -1,0 +1,21 @@
+{
+  "project": "contenthub-dev",
+  "order": 10,
+  "measure_status": "Todo/Ready",
+  "additional_filter": "is:open -type:Epic,Feature",
+  "bin_days": 14,
+  "max_bars": null,
+  "threshold_days": 60,
+  "batch_min": 4,
+  "copy": {
+    "title": "Waiting to Start",
+    "headline": "How long have these tickets been waiting to get started?",
+    "lede": "Every open issue sitting in Todo/Ready on the dev board. Grooming is done, but no developer has picked the work up yet. Each ticket is aged from the moment it last moved into that column.",
+    "stat_noun": "open issues in Todo/Ready",
+    "chart_title": "Distribution of time waiting to start",
+    "table_title": "Every ticket, longest wait first",
+    "notes": [
+      "**Age here reads differently than in QA.** A ticket waiting to start is competing for capacity against everything else in the column, so a long tail is expected. What is worth looking at is the shape: a wide spread suggests the column is being picked from by priority, while a long flat tail suggests tickets that keep losing that competition."
+    ]
+  }
+}

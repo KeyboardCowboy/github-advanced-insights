@@ -1,0 +1,10 @@
+{
+  "accounts": [
+    {
+      "id": "langone",
+      "label": "NYU Langone",
+      "gh_account": "Chris-Albrecht_NYULH"
+    }
+  ],
+  "default_account": "langone"
+}

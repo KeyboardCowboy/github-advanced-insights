@@ -1,0 +1,6 @@
+# Fetched and derived data. Regenerated on demand by ticket_aging.py.
+cache/
+
+# Python bytecode.
+__pycache__/
+*.py[cod]

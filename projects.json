@@ -1,0 +1,19 @@
+{
+  "projects": [
+    {
+      "id": "contenthub-dev",
+      "label": "Development",
+      "owner": "nyulh",
+      "owner_type": "organization",
+      "project_number": 172
+    },
+    {
+      "id": "contenthub-planning",
+      "label": "Planning",
+      "owner": "nyulh",
+      "owner_type": "organization",
+      "project_number": 293
+    }
+  ],
+  "default_project": "contenthub-dev"
+}

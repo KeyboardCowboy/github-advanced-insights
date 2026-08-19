@@ -1,0 +1,493 @@
+<title>Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&display=swap">
+
+<style>
+  /* Tokens duplicated from views/ticket-aging.html rather than shared through a
+     stylesheet: that template has to stay a single self-contained file so it can
+     be published as an artifact, where external CSS is blocked. This page is
+     app-only and never published, so it carries just the subset it needs. */
+  :root {
+    --font-sans: "Mona Sans", "Mona Sans VF", -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    color-scheme: light;
+    --page: #f4f5f6;  --surface: #fcfcfb;  --surface-2: #f0f2f4;
+    --border: #dde1e5; --ink: #12161c;     --ink-2: #545d69;  --ink-3: #838c97;
+    --series: #2a78d6; --good: #1a7f45;    --bad: #b9331f;
+    --shadow: 0 1px 2px rgba(18, 22, 28, .06), 0 8px 24px -12px rgba(18, 22, 28, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #101113; --surface: #1a1a19; --surface-2: #232421;
+      --border: #33342f; --ink: #f3f3f1;   --ink-2: #b0b3ab;  --ink-3: #7f837c;
+      --series: #3987e5; --good: #3fb950;  --bad: #e07a68;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #101113; --surface: #1a1a19; --surface-2: #232421;
+    --border: #33342f; --ink: #f3f3f1;   --ink-2: #b0b3ab;  --ink-3: #7f837c;
+    --series: #3987e5; --good: #3fb950;  --bad: #e07a68;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+
+  body {
+    background: var(--page); color: var(--ink); font-family: var(--font-sans);
+    line-height: 1.55; margin: 0; padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 32px);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+
+  .masthead { padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+  h1 {
+    font-size: clamp(30px, 4.2vw, 40px); font-weight: 700; line-height: 1.15;
+    letter-spacing: -.015em; margin: 0 0 10px;
+  }
+  .metric-def { font-size: 14.5px; color: var(--ink-2); margin: 0; }
+  .backlink {
+    display: inline-block; margin-top: 12px; font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--series); text-decoration: none;
+  }
+  .backlink:hover { text-decoration: underline; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow);
+  }
+  h2 { font-size: 21px; font-weight: 600; margin: 0 0 5px; letter-spacing: -.01em; }
+  h3 { font-size: 16.5px; font-weight: 600; margin: 0 0 5px; letter-spacing: -.005em; }
+  .card-sub { color: var(--ink-2); font-size: 13.5px; margin: 0 0 22px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 18px; }
+  label {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+  input, select {
+    font: inherit; font-size: 14.5px; color: var(--ink);
+    background: var(--page); border: 1px solid var(--border);
+    border-radius: 5px; padding: 8px 11px; width: 100%; box-sizing: border-box;
+  }
+  input:focus, select:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .hint { font-size: 12.5px; color: var(--ink-3); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+  button {
+    font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer;
+    border-radius: 5px; padding: 8px 16px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--ink);
+  }
+  button:hover:not(:disabled) { border-color: var(--ink-3); }
+  button:disabled { cursor: progress; opacity: .6; }
+  button.primary { background: var(--series); border-color: var(--series); color: #fff; }
+  button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+
+  .result {
+    margin-top: 16px; padding: 11px 13px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid var(--border); background: var(--surface-2);
+  }
+  .result[hidden] { display: none; }
+  .result.ok { border-color: var(--good); color: var(--good); }
+  .result.err { border-color: var(--bad); color: var(--bad); }
+  .result ul { margin: 6px 0 0; padding-left: 18px; }
+  .result code { font-family: var(--font-mono); font-size: .92em; }
+
+  button.force { margin-top: 8px; font-size: 12.5px; padding: 5px 12px; }
+  .uses {
+    font-size: 12.5px; color: var(--ink-3); margin: 0 0 14px;
+    font-family: var(--font-mono);
+  }
+  button.remove { color: var(--bad); }
+  textarea {
+    font: inherit; font-size: 14px; color: var(--ink); background: var(--page);
+    border: 1px solid var(--border); border-radius: 5px; padding: 9px 11px;
+    width: 100%; box-sizing: border-box; min-height: 130px; resize: vertical;
+    line-height: 1.5;
+  }
+  textarea:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .group {
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 18px; margin-bottom: 16px; background: var(--page);
+  }
+  .group > h3 { margin-bottom: 4px; }
+  .group > .group-sub {
+    font-size: 12.5px; color: var(--ink-3); margin: 0 0 16px;
+  }
+  .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 620px) { .row3 { grid-template-columns: 1fr; } }
+  .preview {
+    border: 1px solid var(--border); border-radius: 5px; padding: 12px 14px;
+    margin-top: 10px; font-size: 13.5px; background: var(--surface);
+  }
+  .preview:empty { display: none; }
+  .preview p { margin: 0 0 8px; } .preview p:last-child { margin-bottom: 0; }
+  .preview ul { margin: 0 0 8px; padding-left: 18px; }
+  .preview a { color: var(--series); }
+  .slug-note {
+    font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 4px; }
+  th {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+    text-align: left; padding: 0 10px 8px 0; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--border); color: var(--ink-2); }
+  tbody tr:last-child td { border-bottom: none; }
+  td.slug { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); }
+  .badge {
+    font-family: var(--font-mono); font-size: 10.5px; padding: 1px 6px;
+    border-radius: 3px; background: var(--surface-2); color: var(--ink-3);
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <h1 id="page-title">New report</h1>
+    <p class="metric-def" id="page-sub">
+      A report ages every ticket in one board status from the moment it last entered it.
+    </p>
+    <a class="backlink" href="/">&larr; Back to reports</a>
+  </header>
+
+  <form id="report-form">
+    <section class="card">
+      <h2>Configuration</h2>
+      <p class="card-sub">
+        What this report covers. The status clause is generated, so the tickets shown and
+        the age measured can never disagree.
+      </p>
+
+      <div class="group">
+        <div class="row">
+          <div class="field">
+            <label for="title">Label</label>
+            <input id="title" name="title" autocomplete="off" required>
+            <span class="hint">Shown in the sidebar. <span class="slug-note" id="slug-note"></span></span>
+          </div>
+          <div class="field">
+            <label for="project">Project</label>
+            <select id="project" name="project"></select>
+            <span class="hint">Which board this report reads.</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="measure_status">Status</label>
+          <select id="measure_status" name="measure_status" required></select>
+          <span class="hint">Tickets are selected by this status and aged from entry into it.</span>
+        </div>
+
+        <div class="field">
+          <label for="additional_filter">Additional filter</label>
+          <input id="additional_filter" name="additional_filter" autocomplete="off"
+                 spellcheck="false" placeholder="is:open -type:Epic,Feature">
+          <span class="hint">Appended to the generated status clause. Leave empty for none.</span>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="preview-filter">Test filter</button>
+        </div>
+        <div class="result" id="filter-result" hidden></div>
+      </div>
+
+      <div class="group">
+        <h3 class="section-title">Chart scale</h3>
+        <p class="group-sub">Each column runs on its own timescale, so these are per report.</p>
+        <div class="row3">
+          <div class="field">
+            <label for="bin_days">Range per bar (days)</label>
+            <input id="bin_days" name="bin_days" type="number" min="1" step="1" required>
+          </div>
+          <div class="field">
+            <label for="max_bars">Max bars</label>
+            <input id="max_bars" name="max_bars" type="number" min="1" step="1"
+                   placeholder="unlimited">
+            <span class="hint">Empty means bars run to the oldest ticket.</span>
+          </div>
+          <div class="field">
+            <label for="threshold_days">Threshold (days)</label>
+            <input id="threshold_days" name="threshold_days" type="number" min="0" step="1" required>
+          </div>
+        </div>
+        <div class="result" id="scale-warning" hidden></div>
+        <div class="field" style="margin-top:16px;max-width:200px">
+          <label for="order">Sidebar position</label>
+          <input id="order" name="order" type="number" step="10" required>
+          <span class="hint">Lower appears first.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Wording</h2>
+      <p class="card-sub">Anything left empty falls back to generated text.</p>
+
+      <div class="group">
+        <h3 class="section-title">Details</h3>
+        <p class="group-sub">The heading and opening paragraph of the report.</p>
+        <div class="field">
+          <label for="headline">Title</label>
+          <input id="headline" name="headline" autocomplete="off"
+                 placeholder="How long has each ticket been waiting?">
+        </div>
+        <div class="field">
+          <label for="lede">Description</label>
+          <textarea id="lede" name="lede" style="min-height:80px"></textarea>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="section-title">Chart</h3>
+        <div class="field">
+          <label for="chart_title">Chart title</label>
+          <input id="chart_title" name="chart_title" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="chart_sub">Chart description</label>
+          <textarea id="chart_sub" name="chart_sub" style="min-height:70px"></textarea>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="section-title">Table</h3>
+        <div class="field">
+          <label for="table_title">Table title</label>
+          <input id="table_title" name="table_title" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="table_sub">Table description</label>
+          <textarea id="table_sub" name="table_sub" style="min-height:70px"></textarea>
+        </div>
+      </div>
+
+      <div class="group">
+        <h3 class="section-title">Info panel</h3>
+        <p class="group-sub">
+          Optional. Appears under "Reading this correctly", above the notes generated from
+          the data. Supports <code>**bold**</code>, <code>*italic*</code>,
+          <code>`code`</code>, <code>- lists</code>, and
+          <code>[links](https://...)</code>.
+        </p>
+        <div class="field">
+          <label for="info_panel">Content</label>
+          <textarea id="info_panel" name="info_panel"></textarea>
+        </div>
+        <div class="preview" id="info-preview"></div>
+      </div>
+    </section>
+
+    <div class="actions">
+      <button type="submit" class="primary" id="save">Save report</button>
+      <button type="button" class="remove" id="delete" hidden>Delete report</button>
+    </div>
+    <div class="result" id="save-result" hidden></div>
+  </form>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const form = $("report-form");
+  const slug = new URLSearchParams(location.search).get("slug");
+  const isNew = !slug;
+
+  const TEXT_FIELDS = ["title", "headline", "lede", "chart_title", "chart_sub",
+                       "table_title", "table_sub", "info_panel"];
+  const NUMBER_FIELDS = ["bin_days", "max_bars", "threshold_days", "order"];
+
+  const escapeHtml = t => String(t).replace(/[&<>"]/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function show(box, kind, html) {
+    box.className = `result ${kind}`;
+    box.innerHTML = html;
+    box.hidden = false;
+  }
+
+  /** The slug is derived from the label on create, then fixed: it names the
+   *  definition file and the cache files, so renaming would orphan them. */
+  function currentSlug() {
+    if (!isNew) return slug;
+    return $("title").value.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "").slice(0, 64) || "report";
+  }
+
+  function readForm() {
+    const copy = {};
+    for (const name of TEXT_FIELDS) copy[name] = $(name).value.trim();
+    const values = { copy, project: $("project").value,
+                     measure_status: $("measure_status").value,
+                     additional_filter: $("additional_filter").value.trim() };
+    for (const name of NUMBER_FIELDS) {
+      const raw = $(name).value.trim();
+      values[name] = raw === "" ? null : Number(raw);
+    }
+    return values;
+  }
+
+  async function loadStatuses(projectId, selected) {
+    const select = $("measure_status");
+    select.innerHTML = '<option value="">Loading...</option>';
+    const response = await fetch(`/api/boards/${encodeURIComponent(projectId)}/statuses`);
+    if (!response.ok) {
+      select.innerHTML = '<option value="">Could not load statuses</option>';
+      return;
+    }
+    const { statuses } = await response.json();
+    // Straight from the board, so a status can never be misspelled here. That
+    // was the one field a typo in silently produced an empty report.
+    select.innerHTML = statuses.map(s =>
+      `<option value="${escapeHtml(s)}"${s === selected ? " selected" : ""}>${escapeHtml(s)}</option>`
+    ).join("");
+  }
+
+  function checkScale() {
+    const bin = Number($("bin_days").value) || 0;
+    const bars = Number($("max_bars").value) || 0;
+    const threshold = Number($("threshold_days").value) || 0;
+    const box = $("scale-warning");
+    if (bars && threshold > bin * bars) {
+      // The renderer clamps the line to the banded range; without this the
+      // clamp is silent and the line looks misplaced.
+      show(box, "err", `The threshold at ${threshold} days falls outside the charted `
+        + `range of ${bin * bars} days, so the line will sit at the last bar.`);
+    } else {
+      box.hidden = true;
+    }
+  }
+
+  async function load() {
+    const { projects, default_project } =
+      await (await fetch("/api/projects")).json();
+    $("project").innerHTML = projects.map(c =>
+      `<option value="${escapeHtml(c.id)}">${escapeHtml(c.label || c.id)}</option>`).join("");
+
+    let stored = {}, defaults = {};
+    if (!isNew) {
+      const response = await fetch(`/api/definitions/${encodeURIComponent(slug)}`);
+      if (!response.ok) { $("page-title").textContent = "Report not found"; return; }
+      ({ stored, defaults } = await response.json());
+      $("page-title").textContent = (stored.copy || {}).title || slug;
+      $("page-sub").textContent = `Editing ${slug}.`;
+      $("delete").hidden = false;
+      document.title = `Edit ${slug}`;
+    } else {
+      defaults = (await (await fetch("/api/definitions/__defaults__")).json().catch(() => ({})))
+        .defaults || {};
+    }
+
+    $("project").value = stored.project || default_project || "";
+    $("additional_filter").value = isNew
+      ? "is:open -type:Epic,Feature"
+      : (stored.additional_filter || "");
+    const copy = stored.copy || {};
+    for (const name of TEXT_FIELDS) $(name).value = copy[name] || "";
+
+    // A definition written before the info panel existed keeps its authored
+    // notes; fold them in as bullets so an edit does not silently drop them.
+    if (!copy.info_panel && Array.isArray(copy.notes) && copy.notes.length) {
+      $("info_panel").value = copy.notes.map(n => `- ${n}`).join("\n");
+    }
+
+    $("bin_days").value = stored.bin_days ?? defaults.bin_days ?? 7;
+    $("max_bars").value = stored.max_bars ?? "";
+    $("threshold_days").value = stored.threshold_days ?? defaults.threshold_days ?? 30;
+    $("order").value = stored.order ?? 999;
+
+    await loadStatuses($("project").value, stored.measure_status);
+    updateSlugNote();
+    renderInfoPreview();
+  }
+
+  function updateSlugNote() {
+    $("slug-note").textContent = isNew
+      ? `Saves as ${currentSlug()}.json`
+      : `Stored as ${slug}.json (fixed).`;
+  }
+
+  let previewTimer;
+  async function renderInfoPreview() {
+    const markdown = $("info_panel").value;
+    if (!markdown.trim()) { $("info-preview").innerHTML = ""; return; }
+    // Rendered by the server with the same function the report page uses, so
+    // the preview cannot drift from the output.
+    const response = await fetch("/api/definitions/render", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ markdown })
+    });
+    $("info-preview").innerHTML = (await response.json()).html;
+  }
+
+  $("info_panel").addEventListener("input", () => {
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(renderInfoPreview, 300);
+  });
+  $("title").addEventListener("input", updateSlugNote);
+  for (const name of ["bin_days", "max_bars", "threshold_days"]) {
+    $(name).addEventListener("input", checkScale);
+  }
+  $("project").addEventListener("change", () =>
+    loadStatuses($("project").value, $("measure_status").value));
+
+  $("preview-filter").addEventListener("click", async () => {
+    const button = $("preview-filter");
+    button.disabled = true;
+    show($("filter-result"), "", "Checking...");
+    const response = await fetch("/api/definitions/preview", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(readForm())
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      show($("filter-result"), "err", escapeHtml(payload.message || "Filter failed."));
+    } else if (payload.total === 0) {
+      show($("filter-result"), "err",
+        `<code>${escapeHtml(payload.filter)}</code> matches nothing right now.`);
+    } else {
+      show($("filter-result"), "ok",
+        `<code>${escapeHtml(payload.filter)}</code> matches `
+        + `<strong>${payload.total}</strong> issue${payload.total === 1 ? "" : "s"}.`
+        + `<ul>` + payload.samples.slice(0, 3).map(i =>
+            `<li>#${i.number} ${escapeHtml(i.title.slice(0, 60))}</li>`).join("") + `</ul>`);
+    }
+    button.disabled = false;
+  });
+
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const target = currentSlug();
+    const response = await fetch(`/api/definitions/${encodeURIComponent(target)}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(readForm())
+    });
+    const payload = await response.json();
+    if (response.ok) {
+      show($("save-result"), "ok",
+        `Saved. <a href="/">Back to reports</a> and refresh it to pull data.`);
+      if (isNew) location.search = `?slug=${encodeURIComponent(target)}`;
+    } else {
+      const problems = payload.problems || [payload.message || "Could not save."];
+      show($("save-result"), "err", "Not saved:<ul>"
+        + problems.map(p => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>");
+    }
+  });
+
+  $("delete").addEventListener("click", async () => {
+    const response = await fetch(`/api/definitions/${encodeURIComponent(slug)}`,
+      { method: "DELETE" });
+    if (response.ok) { location.href = "/"; }
+    else { show($("save-result"), "err", "Could not delete."); }
+  });
+
+  load();
+})();
+</script>

@@ -1,0 +1,826 @@
+<title>Ready for QA Aging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mona+Sans:wght@400..700&display=swap">
+
+<style>
+  /* Light palette is the base; both dark scopes below redefine only tokens. */
+  :root {
+    --font-sans: "Mona Sans", "Mona Sans VF", -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji";
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+
+    color-scheme: light;
+    --page:        #f4f5f6;
+    --surface:     #fcfcfb;
+    --surface-2:   #f0f2f4;
+    --border:      #dde1e5;
+    --grid:        #e7eaed;
+    --ink:         #12161c;
+    --ink-2:       #545d69;
+    --ink-3:       #838c97;
+    --series:      #2a78d6;
+    --series-soft: #dbe8f9;
+    --accent-rule: #b9331f;
+    --shadow:      0 1px 2px rgba(18, 22, 28, .06), 0 8px 24px -12px rgba(18, 22, 28, .18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:        #101113;
+      --surface:     #1a1a19;
+      --surface-2:   #232421;
+      --border:      #33342f;
+      --grid:        #2b2c28;
+      --ink:         #f3f3f1;
+      --ink-2:       #b0b3ab;
+      --ink-3:       #7f837c;
+      --series:      #3987e5;
+      --series-soft: #1f3450;
+      --accent-rule: #e07a68;
+      --shadow:      0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:        #101113;
+    --surface:     #1a1a19;
+    --surface-2:   #232421;
+    --border:      #33342f;
+    --grid:        #2b2c28;
+    --ink:         #f3f3f1;
+    --ink-2:       #b0b3ab;
+    --ink-3:       #7f837c;
+    --series:      #3987e5;
+    --series-soft: #1f3450;
+    --accent-rule: #e07a68;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .5), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    margin: 0;
+    padding: clamp(20px, 4vw, 56px) clamp(16px, 4vw, 32px);
+  }
+  /* Names the metric once for the whole tool, above the per-report header.
+     Shown in both contexts: a shared single report needs the definition as
+     much as the app does. */
+  .masthead {
+    max-width: 1320px; margin: 0 auto 26px;
+    padding-bottom: 22px; border-bottom: 1px solid var(--border);
+  }
+  /* One descending scale, h1 > h2 > h3, so visual weight matches document
+     structure. Sizes live on classes rather than tag selectors so a level
+     change never silently reassigns the typography. */
+  .wordmark {
+    font-family: var(--font-sans);
+    font-size: clamp(30px, 4.2vw, 40px); font-weight: 700;
+    line-height: 1.15; letter-spacing: -.015em;
+    color: var(--ink); margin: 0 0 10px;
+  }
+  .metric-def { font-size: 14.5px; color: var(--ink-2); margin: 0; max-width: 74ch; }
+  .metric-def .contrast { color: var(--ink-3); }
+
+  /* The shell is a flex row only when the sidebar is present (app mode);
+     with the sidebar hidden the wrap centres exactly as it does standalone. */
+  .shell { display: flex; gap: 28px; align-items: flex-start; max-width: 1320px; margin: 0 auto; }
+  .wrap { flex: 1; min-width: 0; max-width: 1000px; margin: 0 auto;
+          display: flex; flex-direction: column; gap: 28px; }
+
+  .sidebar {
+    flex: 0 0 236px; width: 236px; position: sticky;
+    top: clamp(20px, 4vw, 56px); display: flex; flex-direction: column; gap: 6px;
+  }
+  .sidebar-label {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 6px 12px;
+  }
+  .report-link {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    background: transparent; border: 1px solid transparent; border-radius: 5px;
+    padding: 9px 12px; font: inherit; color: var(--ink-2);
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .report-link:hover { background: var(--surface-2); }
+  #scope-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  #scope-filters:empty { display: none; }
+  .scope { display: flex; flex-direction: column; gap: 4px; }
+  .scope label {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); padding-left: 12px;
+  }
+  .scope select {
+    font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; width: 100%;
+  }
+  .scope select:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .create-link {
+    display: block; margin-top: 8px; padding: 9px 12px; border-radius: 5px;
+    font-size: 13px; font-weight: 500; text-align: left;
+    color: var(--series); text-decoration: none;
+    border: 1px dashed var(--border);
+  }
+  .create-link:hover { border-color: var(--series); background: var(--surface-2); }
+  .settings-link {
+    display: block; margin-top: 10px; padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); text-decoration: none;
+    border-top: 1px solid var(--border);
+  }
+  .settings-link:hover { color: var(--ink); }
+  .report-link[aria-current="true"] {
+    background: var(--surface); border-color: var(--border);
+    color: var(--ink); box-shadow: var(--shadow);
+  }
+  .report-link .name { display: block; font-size: 13.5px; font-weight: 500; }
+  .report-link .sub {
+    display: block; font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--ink-3); margin-top: 3px; letter-spacing: .03em;
+  }
+  @media (max-width: 900px) {
+    .shell { flex-direction: column; }
+    .sidebar { position: static; width: 100%; flex: none;
+               flex-direction: row; flex-wrap: wrap; align-items: center; }
+    .sidebar-label { margin: 0 8px 0 0; }
+    .report-link { width: auto; }
+  }
+
+  .refresh {
+    font: inherit; font-size: 11px; font-family: var(--font-mono);
+    letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+    background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px;
+  }
+  .refresh:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-3); }
+  .refresh:disabled { cursor: progress; opacity: .6; }
+  .edit-link {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); text-decoration: none;
+  }
+  .edit-link:hover { color: var(--series); }
+  .refresh-note { font-style: normal; text-transform: none; letter-spacing: .04em; }
+  .refresh-note.error { color: var(--accent-rule); }
+
+  /* ---- header ---- */
+  .meta {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3); margin: 0 0 12px;
+  }
+  .meta .updated { color: var(--ink-2); }
+  .meta .dot { color: var(--border); }
+  .report-title {
+    font-family: var(--font-sans);
+    font-weight: 600; font-size: clamp(21px, 2.7vw, 27px);
+    line-height: 1.25; margin: 0 0 9px; text-wrap: balance;
+    letter-spacing: -.01em;
+  }
+  .lede { color: var(--ink-2); max-width: 64ch; margin: 0; font-size: 14.5px; }
+
+  .filter-line {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--ink-2); margin: 14px 0 0;
+    padding: 8px 12px; border-radius: 5px;
+    background: var(--surface-2); border: 1px solid var(--border);
+  }
+  .filter-line .key {
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .filter-line .query { color: var(--ink); word-break: break-word; }
+
+  /* ---- stat tiles ---- */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 660px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .stat-label {
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+    margin: 0 0 6px;
+  }
+  .stat-value {
+    font-family: var(--font-sans); font-size: 34px; font-weight: 700;
+    line-height: 1; font-variant-numeric: tabular-nums; margin: 0;
+  }
+  .stat-value .unit { font-size: 17px; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
+  .stat-note { font-size: 12.5px; color: var(--ink-2); margin: 7px 0 0; }
+
+  /* ---- cards ---- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: clamp(18px, 3vw, 26px); box-shadow: var(--shadow);
+  }
+  .card-head { margin-bottom: 20px; }
+  .section-title {
+    font-family: var(--font-sans); font-weight: 600;
+    font-size: 16.5px; margin: 0 0 5px; letter-spacing: -.005em;
+  }
+  .card-sub { color: var(--ink-2); font-size: 13.5px; margin: 0; max-width: 68ch; }
+
+  /* ---- histogram ---- */
+  .chart-scroll { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 560px; height: auto; }
+  .bar { fill: var(--series); transition: opacity .12s ease; }
+  .bar-hit { fill: transparent; cursor: default; }
+  .bar-group:hover .bar { opacity: .78; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .axis-line { stroke: var(--border); stroke-width: 1; }
+  .tick {
+    font-family: var(--font-mono); font-size: 11px;
+    fill: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+  .bar-value {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 500;
+    fill: var(--ink); text-anchor: middle; font-variant-numeric: tabular-nums;
+  }
+  .axis-title {
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: .1em; text-transform: uppercase; fill: var(--ink-3);
+  }
+  .threshold { stroke: var(--accent-rule); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .threshold-label {
+    font-family: var(--font-mono); font-size: 10.5px;
+    fill: var(--accent-rule); letter-spacing: .04em;
+  }
+  .empty-plot {
+    font-family: var(--font-mono); font-size: 12px;
+    fill: var(--ink-3); text-anchor: middle; letter-spacing: .06em;
+  }
+
+  #tooltip {
+    position: fixed; pointer-events: none; opacity: 0; transition: opacity .1s ease;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 5px;
+    box-shadow: var(--shadow); padding: 9px 11px; max-width: 260px; z-index: 20;
+    font-size: 12.5px; color: var(--ink);
+  }
+  #tooltip .tt-head {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px;
+  }
+  #tooltip .tt-list {
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: var(--ink-2); margin-top: 5px; line-height: 1.5;
+  }
+
+  /* ---- issue table ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+    text-align: left; padding: 0 10px 9px 0; border-bottom: 1px solid var(--border);
+  }
+  th.num, td.num { text-align: right; }
+  td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.issue { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
+  td.issue a { color: var(--series); text-decoration: none; }
+  td.issue a:hover, td.issue a:focus-visible { text-decoration: underline; }
+  td.title { color: var(--ink-2); }
+  td.days {
+    font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+    white-space: nowrap; width: 1%;
+  }
+  td.spark { width: 34%; min-width: 90px; }
+  .spark-track { background: var(--series-soft); border-radius: 2px; height: 7px; width: 100%; }
+  .spark-fill { background: var(--series); border-radius: 2px; height: 7px; }
+  td.entered {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--ink-3); white-space: nowrap;
+  }
+  td.empty-row {
+    color: var(--ink-3); text-align: center; padding: 26px 0;
+    font-family: var(--font-mono); font-size: 12.5px; letter-spacing: .04em;
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+  }
+  .batch { color: var(--accent-rule); }
+  td.entered.batch { color: var(--accent-rule); }
+
+  /* ---- notes ---- */
+  .notes { font-size: 13.5px; color: var(--ink-2); }
+  .notes .section-title { color: var(--ink); }
+  .notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 9px; }
+  .info-panel { margin-bottom: 14px; }
+  .info-panel[hidden] { display: none; }
+  .info-panel p { margin: 0 0 9px; }
+  .info-panel p:last-child { margin-bottom: 0; }
+  .info-panel ul { margin: 0 0 9px; padding-left: 18px; }
+  .info-panel a { color: var(--series); }
+  .notes strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: var(--font-mono); font-size: .92em;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 3px;
+  }
+  footer {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--ink-3); text-align: center; letter-spacing: .04em;
+  }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--series); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="masthead">
+  <h1 class="wordmark">Work Item Age by Status</h1>
+  <p class="metric-def">
+    How long unfinished work has been sitting in its current column, measured right now.
+    <span class="contrast">Cycle time is only available after work is finished. This is the
+    leading indicator you can still act on.</span>
+  </p>
+</header>
+
+<div class="shell">
+  <nav class="sidebar" id="sidebar" aria-label="Reports" hidden>
+    <div id="scope-filters"></div>
+    <p class="sidebar-label">Reports</p>
+    <div id="report-links"></div>
+    <a class="create-link" href="/report">+ Create a report</a>
+    <a class="settings-link" href="/settings">Settings</a>
+  </nav>
+
+  <div class="wrap">
+  <header>
+    <p class="meta" id="meta"></p>
+    <p class="meta" id="controls" hidden>
+      <button type="button" class="refresh" id="refresh">Refresh data</button>
+      <a class="edit-link" id="edit-link" href="/report">Edit report</a>
+      <span class="refresh-note" id="refresh-note"></span>
+    </p>
+    <h2 class="report-title" id="headline"></h2>
+    <p class="lede" id="lede"></p>
+    <p class="filter-line" id="filter-line" hidden></p>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3 class="section-title" id="chart-title"></h3>
+      <p class="card-sub" id="chart-sub"></p>
+    </div>
+    <div class="chart-scroll"><svg id="histogram" viewBox="0 0 900 380" role="img"
+      aria-label="Histogram of issues by days waiting, in fixed-width day bands"></svg></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h3 class="section-title" id="table-title"></h3>
+      <p class="card-sub" id="table-sub"></p>
+    </div>
+    <div class="chart-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Issue</th><th>Title</th><th class="num">Days</th>
+            <th><span class="sr-only">Relative wait</span></th><th>Entered</th>
+          </tr>
+        </thead>
+        <tbody id="issue-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card notes">
+    <h3 class="section-title">Reading this correctly</h3>
+    <div class="info-panel" id="info-panel" hidden></div>
+    <ul id="notes"></ul>
+  </section>
+
+  <footer id="footer"></footer>
+  </div>
+</div>
+
+<div id="tooltip" role="status" aria-live="polite"></div>
+
+<!--
+  The data island below is the ONLY part of this file the build stage rewrites
+  (ticket_aging.py build, matching on the id). Everything else is fixed
+  source. The default value is an empty model, so opening this file directly --
+  before any fetch has run -- renders the full interface with zeros.
+-->
+<script type="application/json" id="view-model">{}</script>
+
+<script>
+(() => {
+  // Empty state lives here, in the view, because it describes how the interface
+  // looks with no data -- not something the data pipeline should have to supply.
+  const EMPTY = {
+    header: { board_number: null, board_title: "", status: "", updated_display: "never" },
+    stats: [
+      { label: "Tickets", value: "0", unit: "", note: "awaiting data" },
+      { label: "Median wait", value: "0.0", unit: "d", note: "awaiting data" },
+      { label: "Oldest", value: "0", unit: "d", note: "awaiting data" },
+      { label: "Over 30 days", value: "0", unit: "", note: "awaiting data" }
+    ],
+    copy: {},
+    bins: [], rows: [], unknown: [], batch_days: [],
+    axis: { bin_days: 7, banded_days: null, y_max: 5, y_ticks: [0, 5], threshold_days: 30 }
+  };
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const $ = id => document.getElementById(id);
+  const escapeHtml = text => String(text).replace(/[&<>"]/g,
+    c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const el = (name, attrs, text) => {
+    const node = document.createElementNS(SVG_NS, name);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+
+  const tooltip = $("tooltip");
+  const hideTooltip = () => { tooltip.style.opacity = "0"; };
+
+  // ======================================================================
+  // Render -- pure function of a view model. Re-runnable: every target is
+  // cleared first, so switching reports or refreshing redraws in place.
+  // ======================================================================
+  function render(input) {
+    const model = { ...EMPTY, ...input };
+    const { header, axis } = model;
+    const copy = model.copy || {};
+    const statusLabel = header.status || "this status";
+    // Authored copy wins; fallbacks keep the page coherent when a definition
+    // omits a field, or when there is no data at all.
+    const text = (key, fallback) => copy[key] || fallback;
+
+    hideTooltip();
+
+    // ---- header --------------------------------------------------------
+    const board = header.board_number
+      ? `Board ${header.board_number} &middot; ${escapeHtml(header.board_title)}`
+      : "No board data";
+    $("meta").innerHTML =
+      `<span>${board}</span><span class="dot">/</span>`
+      + `<span class="updated">Last updated ${escapeHtml(header.updated_display)}</span>`;
+
+    $("headline").textContent =
+      text("headline", `How long has each ticket been waiting in ${statusLabel}?`);
+    $("lede").textContent = text("lede",
+      `Every open issue currently sitting in ${statusLabel}, aged from the moment it last moved `
+      + `into that column. Earlier trips through the column are excluded, so this measures `
+      + `the current, unbroken wait.`);
+    // The exact board query behind the numbers. It is the complete definition
+    // of the set, so it can be pasted into the Projects filter bar to reproduce it.
+    const filterLine = $("filter-line");
+    filterLine.hidden = !header.filter;
+    if (header.filter) {
+      filterLine.innerHTML = `<span class="key">Filter</span>`
+        + `<span class="query">${escapeHtml(header.filter)}</span>`;
+    }
+
+    $("chart-title").textContent = text("chart_title", "Distribution of current wait");
+    $("table-title").textContent = text("table_title", "Every ticket, oldest first");
+    $("chart-sub").textContent = text("chart_sub",
+      `Issues grouped into ${axis.bin_days}-day bands by how long they have been sitting in `
+      + `${statusLabel}. Hover a bar for the tickets inside it.`);
+    document.title = text("title", "Ticket Aging");
+
+    // ---- stat tiles ----------------------------------------------------
+    $("stats").innerHTML = model.stats.map(stat => `
+      <div class="stat">
+        <p class="stat-label">${escapeHtml(stat.label)}</p>
+        <p class="stat-value">${escapeHtml(stat.value)}${
+          stat.unit ? `<span class="unit">${escapeHtml(stat.unit)}</span>` : ""}</p>
+        <p class="stat-note">${escapeHtml(stat.note)}</p>
+      </div>`).join("");
+
+    // ---- histogram -----------------------------------------------------
+    // Geometry only; every value plotted was derived by the normalize stage.
+    const svg = $("histogram");
+    svg.textContent = "";
+    const W = 900, H = 380;
+    const M = { top: 26, right: 20, bottom: 62, left: 46 };
+    const plotW = W - M.left - M.right;
+    const plotH = H - M.top - M.bottom;
+    const yScale = value => M.top + plotH - (value / axis.y_max) * plotH;
+
+    axis.y_ticks.forEach(value => {
+      svg.appendChild(el("line", {
+        class: value === 0 ? "axis-line" : "grid-line",
+        x1: M.left, x2: M.left + plotW, y1: yScale(value), y2: yScale(value)
+      }));
+      svg.appendChild(el("text", {
+        class: "tick", x: M.left - 10, y: yScale(value) + 4, "text-anchor": "end"
+      }, value));
+    });
+
+    function showTooltip(event, bin) {
+      const listed = bin.issues.slice(0, 6).join("  ");
+      const more = bin.count > 6 ? `  +${bin.count - 6} more` : "";
+      tooltip.innerHTML = `
+        <div class="tt-head">${escapeHtml(bin.range_label || bin.label + " days")}</div>
+        <strong>${bin.count}</strong> issue${bin.count === 1 ? "" : "s"}
+        ${bin.count ? `<div class="tt-list">${escapeHtml(listed + more)}</div>` : ""}`;
+      tooltip.style.opacity = "1";
+      const rect = event.target.getBoundingClientRect();
+      const x = event.clientX ?? rect.left + rect.width / 2;
+      const y = event.clientY ?? rect.top;
+      tooltip.style.left = Math.min(x + 14, window.innerWidth - 275) + "px";
+      tooltip.style.top = Math.max(y - 12, 8) + "px";
+    }
+
+    if (model.bins.length) {
+      // 2px of surface between neighbouring bars keeps them from reading as one block.
+      const slotW = plotW / model.bins.length;
+      const barW = slotW - 2;
+
+      model.bins.forEach((bin, index) => {
+        const x = M.left + index * slotW + 1;
+        const group = el("g", { class: "bar-group" });
+
+        if (bin.count > 0) {
+          const barH = plotH - (yScale(bin.count) - M.top);
+          // rx rounds all four corners; the bar is drawn 4px taller than needed
+          // so the bottom pair falls below the baseline and clips flat there.
+          group.appendChild(el("rect", {
+            class: "bar", x, y: yScale(bin.count), width: barW, height: barH + 4, rx: 4
+          }));
+          group.appendChild(el("text", {
+            class: "bar-value", x: x + barW / 2, y: yScale(bin.count) - 9
+          }, bin.count));
+        }
+
+        // Full-height transparent hit area, so the tooltip is reachable on short
+        // and empty bars too, not only where there is ink.
+        const hit = el("rect", {
+          class: "bar-hit", x, y: M.top, width: barW, height: plotH,
+          tabindex: 0, role: "img",
+          "aria-label": `${bin.range_label || bin.label + " days"}: `
+          + `${bin.count} issue${bin.count === 1 ? "" : "s"}`
+        });
+        hit.addEventListener("mousemove", e => showTooltip(e, bin));
+        hit.addEventListener("focus", e => showTooltip(e, bin));
+        hit.addEventListener("mouseleave", hideTooltip);
+        hit.addEventListener("blur", hideTooltip);
+        group.appendChild(hit);
+
+        svg.appendChild(group);
+        svg.appendChild(el("text", {
+          class: "tick", x: x + barW / 2, y: M.top + plotH + 20, "text-anchor": "middle"
+        }, bin.label));
+      });
+
+      // Reference line: past this many days a wait stops being a queue and
+      // starts being a stalled ticket. Positioned by day value, not bin index.
+      const bandedDays = axis.banded_days ?? (model.bins.length * axis.bin_days);
+      const thresholdX = M.left
+        + (Math.min(axis.threshold_days, bandedDays) / axis.bin_days) * slotW;
+      if (thresholdX < M.left + plotW) {
+        svg.appendChild(el("line", {
+          class: "threshold", x1: thresholdX, x2: thresholdX, y1: M.top - 6, y2: M.top + plotH
+        }));
+        // With an overflow bucket the line sits at the far right, where a
+        // left-anchored label would crowd the edge. Flip it inward there.
+        const nearEdge = thresholdX > M.left + plotW * 0.82;
+        svg.appendChild(el("text", {
+          class: "threshold-label",
+          x: nearEdge ? thresholdX - 6 : thresholdX + 6,
+          y: M.top - 10,
+          "text-anchor": nearEdge ? "end" : "start"
+        }, `${axis.threshold_days} days`));
+      }
+    } else {
+      svg.appendChild(el("text", {
+        class: "empty-plot", x: M.left + plotW / 2, y: M.top + plotH / 2
+      }, model.message || "No issues in this status"));
+    }
+
+    svg.appendChild(el("text", {
+      class: "axis-title", x: M.left, y: M.top + plotH + 46
+    }, `Days waiting in ${statusLabel}`));
+    svg.appendChild(el("text", {
+      class: "axis-title", x: M.left - 34, y: M.top - 12
+    }, "Issues"));
+
+    // ---- issue table ---------------------------------------------------
+    $("table-sub").innerHTML = copy.table_sub
+      ? escapeHtml(copy.table_sub)
+      : (model.batch_days.length
+          ? 'Dates in <span class="batch">red</span> mark days when several tickets entered '
+            + 'at once. Those are batch moves rather than individual hand-offs.'
+          : "Sorted by how long each has been waiting.");
+
+    $("issue-rows").innerHTML = model.rows.length
+      ? model.rows.map(row => `
+          <tr>
+            <td class="issue"><a href="${escapeHtml(row.url)}" target="_blank" rel="noopener">#${row.number}</a></td>
+            <td class="title">${escapeHtml(row.title)}</td>
+            <td class="days num">${escapeHtml(row.days_display)}</td>
+            <td class="spark">
+              <div class="spark-track"><div class="spark-fill" style="width:${row.bar_pct}%"></div></div>
+            </td>
+            <td class="entered${row.is_batch ? " batch" : ""}">${escapeHtml(row.entered_date)}</td>
+          </tr>`).join("")
+      : `<tr><td class="empty-row" colspan="5">${
+          escapeHtml(model.message || "Nothing in this status")}</td></tr>`;
+
+    // ---- notes ---------------------------------------------------------
+    // Notes arrive as plain text with **bold** spans, composed by the normalize
+    // stage. Escaping first and converting after means note text can never
+    // inject markup, while still carrying emphasis.
+    const renderNote = note => escapeHtml(note)
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    $("notes").innerHTML = (copy.notes || []).map(n => `<li>${renderNote(n)}</li>`).join("");
+
+    // Authored prose sits above the derived notes. Already escaped and rendered
+    // by the normalize stage, so it is inserted rather than re-processed.
+    const info = $("info-panel");
+    info.innerHTML = copy.info_html || "";
+    info.hidden = !copy.info_html;
+
+    $("footer").textContent =
+      "nyulh/ContentHub-Board \u00b7 ticket_aging.py";
+  }
+
+  // ======================================================================
+  // App mode -- only when a local server answers /api/reports. A published
+  // artifact gets a 404 here and falls through to its baked-in data island.
+  // ======================================================================
+  const LAST_REPORT_KEY = "ticket-aging:last-report";
+  let summaries = [];
+  let currentSlug = null;
+
+  // Compact freshness for the sidebar. The header carries the full timestamp;
+  // here the useful question is only "how stale is this?".
+  function relativeAge(iso) {
+    if (!iso) return "not fetched";
+    const minutes = Math.round((Date.now() - new Date(iso)) / 60000);
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h ago`;
+    return `${Math.round(minutes / (60 * 24))}d ago`;
+  }
+
+  /** Which account and project the sidebar is filtered to. Null means "all",
+   *  which is what a single-account, single-project setup always shows. */
+  const scope = { account: null, project: null };
+
+  function drawScopeFilters() {
+    const accounts = [...new Map(summaries.map(r =>
+      [r.account, r.account_label])).entries()];
+    // A filter over one value tells the reader nothing, so it stays hidden
+    // until there is an actual choice to make.
+    if (accounts.length < 2) scope.account = null;
+
+    const inAccount = summaries.filter(r =>
+      !scope.account || r.account === scope.account);
+    const projects = [...new Map(inAccount.map(r =>
+      [r.project, r.project_label])).entries()];
+    if (projects.length < 2) scope.project = null;
+
+    const control = (key, label, entries) => `
+      <div class="scope">
+        <label for="scope-${key}">${label}</label>
+        <select id="scope-${key}">
+          <option value="">All</option>
+          ${entries.map(([value, text]) =>
+            `<option value="${escapeHtml(value)}"${scope[key] === value ? " selected" : ""}>`
+            + `${escapeHtml(text)}</option>`).join("")}
+        </select>
+      </div>`;
+
+    $("scope-filters").innerHTML =
+      (accounts.length > 1 ? control("account", "Account", accounts) : "")
+      + (projects.length > 1 ? control("project", "Project", projects) : "");
+
+    for (const key of ["account", "project"]) {
+      const select = $(`scope-${key}`);
+      if (!select) continue;
+      select.addEventListener("change", () => {
+        scope[key] = select.value || null;
+        // Narrowing the account can orphan the project selection.
+        if (key === "account") scope.project = null;
+        drawScopeFilters();
+        drawSidebar();
+      });
+    }
+  }
+
+  function visibleSummaries() {
+    return summaries.filter(r =>
+      (!scope.account || r.account === scope.account)
+      && (!scope.project || r.project === scope.project));
+  }
+
+  function drawSidebar() {
+    const link = report => `
+      <button type="button" class="report-link" data-slug="${escapeHtml(report.slug)}"
+              aria-current="${report.slug === currentSlug}">
+        <span class="name">${escapeHtml(report.title)}</span>
+        <span class="sub">${report.count === null ? "not fetched"
+          : `${report.count} tickets`} &middot; ${escapeHtml(relativeAge(report.updated_iso))}</span>
+      </button>`;
+
+    // Filtering by account and project replaced grouping: with dropdowns the
+    // list stays flat however many boards are configured.
+    const shown = visibleSummaries();
+    $("report-links").innerHTML = shown.length
+      ? shown.map(link).join("")
+      : '<p class="sidebar-label">No reports here</p>';
+
+    $("report-links").querySelectorAll(".report-link").forEach(button => {
+      button.addEventListener("click", () => selectReport(button.dataset.slug));
+    });
+  }
+
+  function setNote(message, isError) {
+    const note = $("refresh-note");
+    note.textContent = message ? ` ${message}` : "";
+    note.classList.toggle("error", Boolean(isError));
+  }
+
+  async function selectReport(slug) {
+    currentSlug = slug;
+    localStorage.setItem(LAST_REPORT_KEY, slug);
+    $("edit-link").href = `/report?slug=${encodeURIComponent(slug)}`;
+    drawSidebar();
+    setNote("");
+
+    const response = await fetch(`/api/reports/${slug}`);
+    if (response.ok) return render(await response.json());
+
+    // A defined-but-never-fetched report is a normal state, not an error: show
+    // the empty interface and point at the control that fixes it.
+    const detail = await response.json().catch(() => ({}));
+    const summary = summaries.find(r => r.slug === slug) || {};
+    render({
+      header: { ...EMPTY.header, status: summary.status || "" },
+      copy: { title: summary.title, headline: `${summary.title || "Report"} has no data yet` },
+      message: detail.message || "Not fetched yet"
+    });
+  }
+
+  async function refreshCurrent() {
+    const button = $("refresh");
+    button.disabled = true;
+    setNote("fetching from GitHub...");
+
+    try {
+      const response = await fetch(`/api/reports/${currentSlug}/refresh`, { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "refresh failed");
+
+      render(payload);
+      // Keep the sidebar's freshness line in step with what was just rendered.
+      const summary = summaries.find(r => r.slug === currentSlug);
+      if (summary) {
+        summary.updated_display = payload.header.updated_display;
+        summary.updated_iso = payload.header.updated_iso;
+        summary.count = payload.rows.length;
+      }
+      drawSidebar();
+      setNote("up to date");
+    } catch (error) {
+      setNote(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  async function boot() {
+    let response;
+    try {
+      response = await fetch("/api/reports");
+    } catch {
+      response = null;
+    }
+
+    if (!response || !response.ok) {
+      // Static context (published artifact, or the template opened directly):
+      // render whatever the data island holds, sidebar stays hidden.
+      const island = $("view-model").textContent || "{}";
+      return render(JSON.parse(island));
+    }
+
+    summaries = (await response.json()).reports;
+    $("sidebar").hidden = false;
+    drawScopeFilters();
+    $("controls").hidden = false;
+    $("refresh").addEventListener("click", refreshCurrent);
+
+    const remembered = localStorage.getItem(LAST_REPORT_KEY);
+    const initial = summaries.some(r => r.slug === remembered)
+      ? remembered
+      : summaries[0]?.slug;
+    if (initial) await selectReport(initial);
+  }
+
+  boot();
+})();
+</script>

@@ -206,21 +206,21 @@
     <div class="row">
       <div class="field">
         <label>Label</label>
-        <input name="label" autocomplete="off" placeholder="e.g. Work laptop">
-        <span class="hint">A friendly name, shown in this list.</span>
+        <input name="label" autocomplete="off" placeholder="e.g. Work">
+        <span class="hint">A friendly name to reference the account. Ex. "Personal", "Work".</span>
       </div>
       <div class="field">
-        <label>Account id</label>
+        <label>Account ID</label>
         <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">Filled in from the label. Edit it if you prefer.</span>
+        <span class="hint id-hint">A unique machine-name for this account connection. Can't be changed.'</span>
       </div>
     </div>
     <div class="row">
       <div class="field">
-        <label>gh account</label>
+        <label>Github Username</label>
         <input name="gh_account" autocomplete="off" spellcheck="false"
-               placeholder="e.g. KeyboardCowboy">
-        <span class="hint">Your GitHub username. Uses the login you have already signed in with.</span>
+               placeholder="e.g. Zero-Cool">
+        <span class="hint">How you log in to Github.</span>
       </div>
       <div class="field">
         <label>or environment variable</label>
@@ -258,7 +258,7 @@
       <div class="field">
         <label>Project id</label>
         <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">Filled in from the label. Edit it if you prefer.</span>
+        <span class="hint id-hint">A unique machine-name for this project.</span>
       </div>
     </div>
 
@@ -266,7 +266,7 @@
       <div class="field">
         <label>Owner</label>
         <input name="owner" autocomplete="off" spellcheck="false" required>
-        <span class="hint">The GitHub organization or person the board belongs to.</span>
+        <span class="hint">The GitHub organization or person the project belongs to.</span>
       </div>
       <div class="field">
         <label>Owner type</label>
@@ -274,7 +274,7 @@
           <option value="organization">Organization</option>
           <option value="user">User</option>
         </select>
-        <span class="hint">Is that owner an organization or a person? The wrong one fails.</span>
+        <span class="hint">Is that owner an organization or a person?</span>
       </div>
     </div>
 
@@ -282,7 +282,7 @@
       <div class="field">
         <label>Account</label>
         <select name="account"></select>
-        <span class="hint">Which login to read this board with.</span>
+        <span class="hint">Which login to connect with.</span>
       </div>
     </div>
 

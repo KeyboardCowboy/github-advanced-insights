@@ -138,12 +138,138 @@ class ScopeFilters(BrowserTest):
         expect(self.page.locator(".report-link")).not_to_have_count(0)
         self.assertNotIn("beta-report", self.visible_slugs())
 
+    def test_filtering_away_the_open_report_switches_to_one_in_scope(self):
+        """Otherwise the chart shows a report the sidebar no longer lists.
+
+        It is also what lets a filter survive: the remembered report is then
+        always one the remembered filter can show, so the two do not contradict
+        each other on the next load.
+        """
+        self.page.click('.report-link[data-slug="overflow"]')
+        expect(self.page.locator(
+            '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
+
+        self.page.select_option("#scope-project", "beta-board")
+        expect(self.page.locator(".report-link")).to_have_count(1)
+        expect(self.page.locator(
+            '.report-link[data-slug="beta-report"][aria-current="true"]')).to_have_count(1)
+
     def test_selecting_all_restores_every_report(self):
         self.page.select_option("#scope-project", "beta-board")
         expect(self.page.locator(".report-link")).to_have_count(1)
         self.page.select_option("#scope-project", "")
         expect(self.page.locator(".report-link")).to_have_count(7)
         self.assertIn("beta-report", self.visible_slugs())
+
+
+class RememberedScope(BrowserTest):
+    """The filters have to survive a round trip to Settings and back (#23).
+
+    Same two accounts and boards as ScopeFilters: without a real choice the
+    controls do not render and there is nothing to remember.
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    prepare_workspace = ScopeFilters.__dict__["prepare_workspace"]
+
+    def visible_slugs(self):
+        return self.page.locator(".report-link").evaluate_all(
+            "els => els.map(e => e.dataset.slug)")
+
+    def test_a_filter_survives_leaving_the_page_and_coming_back(self):
+        self.goto("/")
+        self.page.select_option("#scope-project", "beta-board")
+        expect(self.page.locator(".report-link")).to_have_count(1)
+        # Filtering moves the selection into the filter, so the stored report
+        # and the stored filter agree rather than contradicting on return.
+        expect(self.page.locator(
+            '.report-link[data-slug="beta-report"][aria-current="true"]')
+        ).to_have_count(1)
+
+        # The actual journey from the report: Settings, then back.
+        self.goto("/settings")
+        self.goto("/")
+
+        expect(self.page.locator("#scope-project")).to_have_value("beta-board")
+        self.assertEqual(self.visible_slugs(), ["beta-report"])
+
+    def test_selecting_all_is_remembered_too(self):
+        # Clearing a filter is as deliberate as setting one, so it has to stick
+        # rather than being read as "nothing saved yet".
+        self.goto("/")
+        self.page.select_option("#scope-project", "beta-board")
+        expect(self.page.locator(".report-link")).to_have_count(1)
+        self.page.select_option("#scope-project", "")
+        expect(self.page.locator(".report-link")).to_have_count(7)
+
+        self.goto("/")
+        expect(self.page.locator("#scope-project")).to_have_value("")
+        self.assertIn("beta-report", self.visible_slugs())
+
+    def test_a_filter_naming_something_that_no_longer_exists_falls_back_to_all(self):
+        """A board can be deleted in Settings between visits.
+
+        Restoring the filter blindly would match nothing and show an empty
+        sidebar with no explanation -- the reader would have a working tool that
+        looks broken.
+        """
+        self.goto("/")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:scope',"
+            " JSON.stringify({account: null, project: 'board-that-was-deleted'}))")
+        self.goto("/")
+
+        expect(self.page.locator("#scope-project")).to_have_value("")
+        self.assertIn("beta-report", self.visible_slugs())
+        self.assertNoPageErrors()
+
+    def test_a_corrupt_stored_filter_is_ignored_rather_than_thrown_on(self):
+        self.goto("/")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:scope', 'not json at all')")
+        self.goto("/")
+
+        expect(self.page.locator(".report-link")).not_to_have_count(0)
+        self.assertNoPageErrors()
+
+    def test_a_remembered_filter_that_would_hide_the_remembered_report_is_cleared(self):
+        """Both are remembered, and they can contradict each other.
+
+        The report wins: it is what the reader came back for, and a narrowing
+        set on an earlier visit is easy to have forgotten. Losing the report
+        instead would look like it had been deleted.
+        """
+        self.goto("/")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:last-report', 'overflow')")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:scope',"
+            " JSON.stringify({account: null, project: 'beta-board'}))")
+        self.goto("/")
+
+        # 'overflow' lives on acme-board, so the beta-board filter would hide it.
+        expect(self.page.locator(
+            '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
+        expect(self.page.locator("#scope-project")).to_have_value("")
+
+    def test_clearing_that_conflict_is_persisted_not_just_applied(self):
+        # Otherwise the same contradiction is resolved again on every load, and
+        # the stored filter stays permanently at odds with what is on screen.
+        self.goto("/")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:last-report', 'overflow')")
+        self.page.evaluate(
+            "localStorage.setItem('ticket-aging:scope',"
+            " JSON.stringify({account: null, project: 'beta-board'}))")
+        self.goto("/")
+        # Wait for boot to settle before reading storage: goto returns on load,
+        # and boot resolves the conflict asynchronously after that.
+        expect(self.page.locator("#scope-project")).to_have_value("")
+
+        stored = self.page.evaluate(
+            "JSON.parse(localStorage.getItem('ticket-aging:scope'))")
+        self.assertIsNone(stored["project"], stored)
 
 
 if __name__ == "__main__":

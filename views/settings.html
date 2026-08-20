@@ -322,7 +322,10 @@
 (() => {
   const list = document.getElementById("project-list");
   const template = document.getElementById("project-template");
-  const FIELDS = ["id", "label", "owner", "owner_type", "project_number"];
+  // Every control the project form owns. A field missing here is rendered and
+  // populated but never read, so it silently fails to save and Test runs
+  // against a different value than the one on screen.
+  const FIELDS = ["id", "label", "account", "owner", "owner_type", "project_number"];
 
   const escapeHtml = t => String(t).replace(/[&<>"]/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));

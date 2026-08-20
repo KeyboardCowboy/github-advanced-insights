@@ -123,9 +123,12 @@ def save_project(values):
     saved = {
         "id": str(values["id"]).strip(),
         "label": str(values.get("label") or values["id"]).strip(),
+        # Which account's credential reads this board. None means the default
+        # account, which in turn means whatever `gh` is logged in as.
+        "account": str(values.get("account") or "").strip() or None,
         "owner": str(values["owner"]).strip(),
         "owner_type": values["owner_type"],
-                "project_number": int(values["project_number"]),
+        "project_number": int(values["project_number"]),
     }
 
     if is_new:
@@ -145,7 +148,7 @@ def delete_project(project_id):
     """Remove a project. Refuses while any report still references it."""
     from ticket_aging import reports_using_project
 
-    users = reports_using_connection(project_id)
+    users = reports_using_project(project_id)
     if users:
         raise ValueError(
             f"{len(users)} report(s) still use this project: {', '.join(users)}. "

@@ -1,7 +1,7 @@
 ---
 name: 🐞 Bug
-description: Something is not working as designed
-labels: []
+about: Something is not working as designed
+labels: '#Bug'
 ---
 
 ## Brief Description
@@ -15,5 +15,5 @@ labels: []
 
 ## References/Screenshots
 
-## Accptance Criteria
+## Acceptance Criteria
 <!-- Complete the sentence "When this issue is complete, ..." -->

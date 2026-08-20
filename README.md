@@ -191,6 +191,25 @@ premise, so several checks exist specifically to make that loud:
 See `docs/github-api-notes.md` for the API details and `docs/roadmap.md` for what is
 planned and what was deliberately rejected.
 
+## Contributing
+
+Issues use four types, applied automatically by the templates:
+
+| Label | For |
+|---|---|
+| `#Bug` | Something is not working as designed |
+| `#Feature` | A new capability, with a user story and justification |
+| `#Task` | Generic work item |
+| `#Documentation` | Notes, ADRs, and information about the project |
+
+Punctuation groups labels that are not project-specific: `#` marks the issue type and `!`
+marks something the issue needs before it can move, such as `!Needs Research`. Labels
+without punctuation are project-specific, like `UI/UX`.
+
+The bug template asks *how* something fails, because this tool reads a live board and its
+characteristic failure is output that looks entirely normal while resting on a wrong
+premise. Silent wrongness is more urgent than a visible error.
+
 ## License
 
 MIT. See `LICENSE`.

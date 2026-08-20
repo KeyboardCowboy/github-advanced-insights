@@ -1,0 +1,28 @@
+name: Task
+description: Generic work item
+labels: ["#Task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs doing
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Context a stranger would need, since the reason is rarely obvious later.
+    validations:
+      required: true
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: How someone else can tell this is finished.
+      placeholder: |
+        - [ ] ...
+    validations:
+      required: true

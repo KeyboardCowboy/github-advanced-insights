@@ -1,0 +1,3 @@
+# Templates exist to keep issues uniform, so the blank option is off. If none of
+# them fit, Task is the deliberate catch-all.
+blank_issues_enabled: false

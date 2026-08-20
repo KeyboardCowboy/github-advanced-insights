@@ -195,6 +195,29 @@ planned and what was deliberately rejected.
 
 ## Contributing
 
+### Changes go through pull requests
+
+`main` is protected: it takes no direct pushes, and a pull request merges once the test
+suite passes on both supported Python versions. Branch, commit, open a PR, let the checks
+run.
+
+Run the same suite locally before you push:
+
+```bash
+python3 -m unittest discover
+```
+
+From the repo root, nothing to install. It needs no network, no credentials, and no
+GitHub board — it runs against synthetic fixtures, so it behaves the same on your machine
+as it does in CI, and a fork's pull request passes without any access to secrets. See
+[tests/README.md](tests/README.md) for how the fixtures and goldens work.
+
+Put closing keywords like `Closes #12` in the pull request description rather than in a
+commit message; a squash merge can rewrite the commit, and the PR body is read at merge
+time either way.
+
+### Issue types
+
 Issues use four types, applied automatically by the templates:
 
 | Label | For |

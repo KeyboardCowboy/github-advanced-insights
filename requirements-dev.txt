@@ -1,0 +1,10 @@
+# Browser tests only.
+#
+# The tool itself needs nothing beyond the standard library, and that stays
+# true: nothing in this file is required to run it, or to run the offline
+# suite. `python3 -m unittest discover` works on a plain checkout and skips the
+# browser tests when Playwright is absent.
+#
+#   pip install -r requirements-dev.txt
+#   playwright install chromium
+playwright~=1.62

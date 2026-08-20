@@ -206,6 +206,10 @@ Punctuation groups labels that are not project-specific: `#` marks the issue typ
 marks something the issue needs before it can move, such as `!Needs Research`. Labels
 without punctuation are project-specific, like `UI/UX`.
 
+Templates live in `.github/ISSUE_TEMPLATE/` as plain markdown, so what you fill in is
+exactly what the issue looks like. Their headings are the expected shape of a report; keep
+them and delete any that genuinely do not apply.
+
 The bug template asks *how* something fails, because this tool reads a live board and its
 characteristic failure is output that looks entirely normal while resting on a wrong
 premise. Silent wrongness is more urgent than a visible error.

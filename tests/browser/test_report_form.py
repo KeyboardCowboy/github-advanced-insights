@@ -115,9 +115,10 @@ class NewReport(BrowserTest):
         replaced with no warning. Verified directly against `report_store` --
         a report measuring "In Progress" came back measuring "Ready for QA".
 
-        Marked expected-failure rather than deleted so the suite stays green
-        while still carrying the case. Fixing the bug makes this an unexpected
-        success, which fails the run and asks for the decorator to come off.
+        Filed as #32. Marked expected-failure rather than deleted so the suite
+        stays green while still carrying the case. Fixing the bug makes this an
+        unexpected success, which fails the run and asks for the decorator to
+        come off.
         """
         self.page.fill("#title", "Baseline")
         self.page.select_option("#measure_status", "Ready for QA")

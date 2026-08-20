@@ -191,7 +191,7 @@ def list_reports():
         print("    python3 ticket_aging_server.py\n")
         return
 
-    print(f"\n{len(slugs)} report(s) in {REPORTS_DIR.relative_to(REPO_ROOT)}, "
+    print(f"\n{len(slugs)} report(s) in {workspace.short_path(REPORTS_DIR)}, "
           "in board workflow order:\n")
     for slug in slugs:
         definition = load_definition(slug)
@@ -272,7 +272,7 @@ def fetch_report(slug):
     path.write_text(json.dumps(raw, indent=2))
     repos = {i["repository"]["nameWithOwner"] for i in issues if i.get("repository")}
     span = f" across {len(repos)} repos" if len(repos) > 1 else ""
-    print(f"fetch     {len(issues)} issues{span} -> {path.relative_to(REPO_ROOT)}")
+    print(f"fetch     {len(issues)} issues{span} -> {workspace.short_path(path)}")
 
 
 # --------------------------------------------------------------------------
@@ -527,7 +527,7 @@ def normalize_report(slug):
 
     CACHE_DIR.mkdir(exist_ok=True)
     paths["model"].write_text(json.dumps(view_model, indent=2))
-    print(f"normalize {len(rows)} rows, {len(bins)} bins -> {paths['model'].relative_to(REPO_ROOT)}")
+    print(f"normalize {len(rows)} rows, {len(bins)} bins -> {workspace.short_path(paths['model'])}")
     if unknown:
         label = "ticket" if len(unknown) == 1 else "tickets"
         print(f"          {len(unknown)} {label} had no entry event; listed in the page")
@@ -566,7 +566,7 @@ def build_report(slug):
 
     CACHE_DIR.mkdir(exist_ok=True)
     paths["html"].write_text(built)
-    print(f"build     {len(built) / 1024:.0f} KB -> {paths['html'].relative_to(REPO_ROOT)}")
+    print(f"build     {len(built) / 1024:.0f} KB -> {workspace.short_path(paths['html'])}")
 
 
 def print_report(slug):

@@ -72,6 +72,22 @@ def ensure():
         gitignore.write_text(WORKSPACE_GITIGNORE)
 
 
+def short_path(path):
+    """A path trimmed for display, falling back to the full path.
+
+    Progress lines read better as `workspace/cache/x.json` than as an absolute
+    path, but the workspace can sit anywhere `$GH_INSIGHTS_HOME` points, which
+    may be outside the repo entirely. Trim when we can, print in full when we
+    cannot; never fail just to format a message.
+    """
+    for base in (TOOL_DIR, Path.cwd()):
+        try:
+            return str(Path(path).relative_to(base))
+        except ValueError:
+            continue
+    return str(path)
+
+
 def describe():
     """Where the workspace is and how it was chosen, for startup output."""
     if os.environ.get("GH_INSIGHTS_HOME", "").strip():

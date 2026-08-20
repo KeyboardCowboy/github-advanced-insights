@@ -1,5 +1,27 @@
 # Tests
 
+## Running them
+
+```
+python3 -m unittest discover
+```
+
+From the repo root, with no arguments and nothing to install. Everything is
+stdlib, so this is also the whole of what CI has to run.
+
+The suite never touches the network, your credentials, or your own workspace.
+`tests/helpers.py` sets `GH_INSIGHTS_HOME` to the fixtures before the tool is
+imported, and anything that writes works on a throwaway copy — so a test run
+leaves no changes behind and gives the same result on any machine.
+
+| File | Covers |
+|---|---|
+| `test_normalize_goldens.py` | every fixture's view model, compared to its golden |
+| `test_bins.py` | `build_bins`: band edges, empty bands, the overflow bucket |
+| `test_markup.py` | `markup.render`: formatting, and that raw HTML stays inert |
+| `test_validation.py` | the account, project and report validators |
+| `test_filter_composition.py` | the GitHub filter built from `measure_status` |
+
 ## Fixtures
 
 `fixtures/workspace/` is a synthetic workspace: a fake board, six report

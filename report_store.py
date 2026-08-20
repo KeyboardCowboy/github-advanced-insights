@@ -44,7 +44,7 @@ def existing_slugs():
 
 
 def load_raw(slug):
-    """A definition exactly as stored, without defaults or resolved connection."""
+    """A definition exactly as stored, without defaults or a resolved project."""
     path = REPORTS_DIR / f"{slug}.json"
     return json.loads(path.read_text()) if path.exists() else None
 

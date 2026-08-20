@@ -24,7 +24,7 @@ OWNER_TYPES = ("organization", "user")
 
 # GitHub logins and repository names.
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
-# Connection ids name nothing on disk today, but they appear in URLs and in
+# Project ids name nothing on disk today, but they appear in URLs and in
 # every definition, so keep them to the same safe shape as report slugs.
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
@@ -83,7 +83,7 @@ def validate_project(values, existing_ids=(), is_new=False):
 
     project_id = str(values.get("id", "")).strip()
     if not project_id:
-        problems.append("Connection id is required.")
+        problems.append("Project id is required.")
     elif not ID_PATTERN.match(project_id):
         problems.append(
             f"'{project_id}' is not a valid id. Use lowercase letters, numbers, "

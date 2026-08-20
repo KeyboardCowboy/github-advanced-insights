@@ -1,0 +1,13 @@
+{
+  "project": "acme-board",
+  "order": 10,
+  "measure_status": "In QA",
+  "additional_filter": "is:open",
+  "bin_days": 1,
+  "max_bars": 5,
+  "threshold_days": 5,
+  "batch_min": 4,
+  "copy": {
+    "title": "Overflow"
+  }
+}

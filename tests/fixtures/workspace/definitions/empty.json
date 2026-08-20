@@ -1,0 +1,13 @@
+{
+  "project": "acme-board",
+  "order": 10,
+  "measure_status": "Done",
+  "additional_filter": "is:open",
+  "bin_days": 7,
+  "max_bars": null,
+  "threshold_days": 14,
+  "batch_min": 4,
+  "copy": {
+    "title": "Empty"
+  }
+}

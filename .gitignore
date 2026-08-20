@@ -3,7 +3,7 @@
 # and a contribution never carries someone's board identifiers. To share a set
 # of reports, make this directory its own repository; the .gitignore written
 # inside it keeps the personal and derived files out.
-workspace/
+/workspace/
 
 # Python bytecode.
 __pycache__/

@@ -1,0 +1,82 @@
+{
+  "fetched_at": "2026-06-15T12:00:00+00:00",
+  "board": {
+    "number": 1,
+    "title": "Acme Delivery"
+  },
+  "filter": "status:\"In Review\" is:open",
+  "measure_status": "In Review",
+  "project": "acme-board",
+  "issue_ids": [
+    "I_fixture201",
+    "I_fixture202",
+    "I_fixture203"
+  ],
+  "timelines": {
+    "I_fixture201": {
+      "id": "I_fixture201",
+      "number": 201,
+      "title": "Normal ticket",
+      "url": "https://github.com/acme/widgets/issues/201",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-05T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Review",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture202": {
+      "id": "I_fixture202",
+      "number": 202,
+      "title": "Another normal one",
+      "url": "https://github.com/acme/widgets/issues/202",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-10T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Review",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture203": {
+      "id": "I_fixture203",
+      "number": 203,
+      "title": "History predates status tracking",
+      "url": "https://github.com/acme/widgets/issues/203",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 0,
+        "nodes": []
+      }
+    }
+  }
+}

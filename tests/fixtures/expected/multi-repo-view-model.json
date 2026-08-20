@@ -1,0 +1,124 @@
+{
+  "header": {
+    "board_number": 1,
+    "board_title": "Acme Delivery",
+    "status": "Blocked",
+    "filter": "status:\"Blocked\" is:open",
+    "updated_iso": "2026-06-15T12:00:00+00:00",
+    "updated_display": "15 Jun 2026, 12:00 UTC"
+  },
+  "copy": {
+    "title": "Multi repo",
+    "info_html": "",
+    "notes": [
+      "**Wall-clock days, not business days.** A three-week wait includes three weekends.",
+      "**Only the current stint counts.** A ticket that left Blocked and came back is aged from its latest entry, not its first.",
+      "**Nothing is estimated.** All 3 tickets had a usable entry event in their GitHub timeline."
+    ]
+  },
+  "stats": [
+    {
+      "label": "Tickets",
+      "value": "3",
+      "unit": "",
+      "note": "tickets in this set"
+    },
+    {
+      "label": "Median wait",
+      "value": "12.1",
+      "unit": "d",
+      "note": "half have waited longer"
+    },
+    {
+      "label": "Oldest",
+      "value": "14",
+      "unit": "d",
+      "note": "#301"
+    },
+    {
+      "label": "Over 14 days",
+      "value": "1",
+      "unit": "",
+      "note": "33% of the set"
+    }
+  ],
+  "bins": [
+    {
+      "low": 0,
+      "high": 6,
+      "label": "0-6",
+      "range_label": "0 to 7 days",
+      "count": 1,
+      "issues": [
+        "#302"
+      ]
+    },
+    {
+      "low": 7,
+      "high": 13,
+      "label": "7-13",
+      "range_label": "7 to 14 days",
+      "count": 1,
+      "issues": [
+        "#301"
+      ]
+    },
+    {
+      "low": 14,
+      "high": 20,
+      "label": "14-20",
+      "range_label": "14 to 21 days",
+      "count": 1,
+      "issues": [
+        "#301"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "number": 301,
+      "title": "Widget crash on save",
+      "url": "https://github.com/acme/widgets/issues/301",
+      "repo": "acme/widgets",
+      "days": 14.12,
+      "days_display": "14.1",
+      "entered_date": "2026-06-01",
+      "bar_pct": 100.0,
+      "is_batch": false
+    },
+    {
+      "number": 301,
+      "title": "Tools CLI hangs",
+      "url": "https://github.com/acme/tools/issues/301",
+      "repo": "acme/tools",
+      "days": 12.12,
+      "days_display": "12.1",
+      "entered_date": "2026-06-03",
+      "bar_pct": 85.8,
+      "is_batch": false
+    },
+    {
+      "number": 302,
+      "title": "Shared library bump",
+      "url": "https://github.com/acme/tools/issues/302",
+      "repo": "acme/tools",
+      "days": 6.12,
+      "days_display": "6.1",
+      "entered_date": "2026-06-09",
+      "bar_pct": 43.3,
+      "is_batch": false
+    }
+  ],
+  "unknown": [],
+  "axis": {
+    "bin_days": 7,
+    "banded_days": null,
+    "y_max": 5,
+    "y_ticks": [
+      0,
+      5
+    ],
+    "threshold_days": 14
+  },
+  "batch_days": []
+}

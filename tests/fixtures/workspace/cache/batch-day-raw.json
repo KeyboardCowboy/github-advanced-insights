@@ -1,0 +1,149 @@
+{
+  "fetched_at": "2026-06-15T12:00:00+00:00",
+  "board": {
+    "number": 1,
+    "title": "Acme Delivery"
+  },
+  "filter": "status:\"Ready for QA\" is:open",
+  "measure_status": "Ready for QA",
+  "project": "acme-board",
+  "issue_ids": [
+    "I_fixture401",
+    "I_fixture402",
+    "I_fixture403",
+    "I_fixture404",
+    "I_fixture405"
+  ],
+  "timelines": {
+    "I_fixture401": {
+      "id": "I_fixture401",
+      "number": 401,
+      "title": "Swept ticket 1",
+      "url": "https://github.com/acme/widgets/issues/401",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture402": {
+      "id": "I_fixture402",
+      "number": 402,
+      "title": "Swept ticket 2",
+      "url": "https://github.com/acme/widgets/issues/402",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture403": {
+      "id": "I_fixture403",
+      "number": 403,
+      "title": "Swept ticket 3",
+      "url": "https://github.com/acme/widgets/issues/403",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture404": {
+      "id": "I_fixture404",
+      "number": 404,
+      "title": "Swept ticket 4",
+      "url": "https://github.com/acme/widgets/issues/404",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture405": {
+      "id": "I_fixture405",
+      "number": 405,
+      "title": "Arrived on its own",
+      "url": "https://github.com/acme/widgets/issues/405",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-10T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

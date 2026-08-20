@@ -1,0 +1,95 @@
+{
+  "fetched_at": "2026-06-15T12:00:00+00:00",
+  "board": {
+    "number": 1,
+    "title": "Acme Delivery"
+  },
+  "filter": "status:\"Blocked\" is:open",
+  "measure_status": "Blocked",
+  "project": "acme-board",
+  "issue_ids": [
+    "I_fixture301",
+    "I_fixture301b",
+    "I_fixture302"
+  ],
+  "timelines": {
+    "I_fixture301": {
+      "id": "I_fixture301",
+      "number": 301,
+      "title": "Widget crash on save",
+      "url": "https://github.com/acme/widgets/issues/301",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-01T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture301b": {
+      "id": "I_fixture301b",
+      "number": 301,
+      "title": "Tools CLI hangs",
+      "url": "https://github.com/acme/tools/issues/301",
+      "repository": {
+        "nameWithOwner": "acme/tools"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-03T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture302": {
+      "id": "I_fixture302",
+      "number": 302,
+      "title": "Shared library bump",
+      "url": "https://github.com/acme/tools/issues/302",
+      "repository": {
+        "nameWithOwner": "acme/tools"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-09T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

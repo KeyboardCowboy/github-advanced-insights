@@ -1,0 +1,142 @@
+{
+  "header": {
+    "board_number": 1,
+    "board_title": "Acme Delivery",
+    "status": "Ready for QA",
+    "filter": "status:\"Ready for QA\" is:open",
+    "updated_iso": "2026-06-15T12:00:00+00:00",
+    "updated_display": "15 Jun 2026, 12:00 UTC"
+  },
+  "copy": {
+    "title": "Batch day",
+    "info_html": "",
+    "notes": [
+      "**Some spikes are batch moves, not a queue forming.** Several tickets entered Ready for QA on the same day on 2026-06-02. Those bands age together, so the shape reflects when someone swept the board as much as when the work actually changed state.",
+      "**Wall-clock days, not business days.** A three-week wait includes three weekends.",
+      "**Only the current stint counts.** A ticket that left Ready for QA and came back is aged from its latest entry, not its first.",
+      "**Nothing is estimated.** All 5 tickets had a usable entry event in their GitHub timeline."
+    ]
+  },
+  "stats": [
+    {
+      "label": "Tickets",
+      "value": "5",
+      "unit": "",
+      "note": "tickets in this set"
+    },
+    {
+      "label": "Median wait",
+      "value": "13.1",
+      "unit": "d",
+      "note": "half have waited longer"
+    },
+    {
+      "label": "Oldest",
+      "value": "13",
+      "unit": "d",
+      "note": "#401"
+    },
+    {
+      "label": "Over 14 days",
+      "value": "0",
+      "unit": "",
+      "note": "0% of the set"
+    }
+  ],
+  "bins": [
+    {
+      "low": 0,
+      "high": 6,
+      "label": "0-6",
+      "range_label": "0 to 7 days",
+      "count": 1,
+      "issues": [
+        "#405"
+      ]
+    },
+    {
+      "low": 7,
+      "high": 13,
+      "label": "7-13",
+      "range_label": "7 to 14 days",
+      "count": 4,
+      "issues": [
+        "#401",
+        "#402",
+        "#403",
+        "#404"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "number": 401,
+      "title": "Swept ticket 1",
+      "url": "https://github.com/acme/widgets/issues/401",
+      "repo": "acme/widgets",
+      "days": 13.12,
+      "days_display": "13.1",
+      "entered_date": "2026-06-02",
+      "bar_pct": 100.0,
+      "is_batch": true
+    },
+    {
+      "number": 402,
+      "title": "Swept ticket 2",
+      "url": "https://github.com/acme/widgets/issues/402",
+      "repo": "acme/widgets",
+      "days": 13.12,
+      "days_display": "13.1",
+      "entered_date": "2026-06-02",
+      "bar_pct": 100.0,
+      "is_batch": true
+    },
+    {
+      "number": 403,
+      "title": "Swept ticket 3",
+      "url": "https://github.com/acme/widgets/issues/403",
+      "repo": "acme/widgets",
+      "days": 13.12,
+      "days_display": "13.1",
+      "entered_date": "2026-06-02",
+      "bar_pct": 100.0,
+      "is_batch": true
+    },
+    {
+      "number": 404,
+      "title": "Swept ticket 4",
+      "url": "https://github.com/acme/widgets/issues/404",
+      "repo": "acme/widgets",
+      "days": 13.12,
+      "days_display": "13.1",
+      "entered_date": "2026-06-02",
+      "bar_pct": 100.0,
+      "is_batch": true
+    },
+    {
+      "number": 405,
+      "title": "Arrived on its own",
+      "url": "https://github.com/acme/widgets/issues/405",
+      "repo": "acme/widgets",
+      "days": 5.12,
+      "days_display": "5.1",
+      "entered_date": "2026-06-10",
+      "bar_pct": 39.0,
+      "is_batch": false
+    }
+  ],
+  "unknown": [],
+  "axis": {
+    "bin_days": 7,
+    "banded_days": null,
+    "y_max": 5,
+    "y_ticks": [
+      0,
+      5
+    ],
+    "threshold_days": 14
+  },
+  "batch_days": [
+    "2026-06-02"
+  ]
+}

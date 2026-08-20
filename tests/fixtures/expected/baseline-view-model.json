@@ -1,0 +1,180 @@
+{
+  "header": {
+    "board_number": 1,
+    "board_title": "Acme Delivery",
+    "status": "In Progress",
+    "filter": "status:\"In Progress\" is:open",
+    "updated_iso": "2026-06-15T12:00:00+00:00",
+    "updated_display": "15 Jun 2026, 12:00 UTC"
+  },
+  "copy": {
+    "title": "Baseline",
+    "info_html": "",
+    "notes": [
+      "**Wall-clock days, not business days.** A three-week wait includes three weekends.",
+      "**Only the current stint counts.** A ticket that left In Progress and came back is aged from its latest entry, not its first.",
+      "**Nothing is estimated.** All 5 tickets had a usable entry event in their GitHub timeline."
+    ]
+  },
+  "stats": [
+    {
+      "label": "Tickets",
+      "value": "5",
+      "unit": "",
+      "note": "tickets in this set"
+    },
+    {
+      "label": "Median wait",
+      "value": "6.1",
+      "unit": "d",
+      "note": "half have waited longer"
+    },
+    {
+      "label": "Oldest",
+      "value": "42",
+      "unit": "d",
+      "note": "#101"
+    },
+    {
+      "label": "Over 14 days",
+      "value": "2",
+      "unit": "",
+      "note": "40% of the set"
+    }
+  ],
+  "bins": [
+    {
+      "low": 0,
+      "high": 6,
+      "label": "0-6",
+      "range_label": "0 to 7 days",
+      "count": 3,
+      "issues": [
+        "#103",
+        "#105",
+        "#104"
+      ]
+    },
+    {
+      "low": 7,
+      "high": 13,
+      "label": "7-13",
+      "range_label": "7 to 14 days",
+      "count": 0,
+      "issues": []
+    },
+    {
+      "low": 14,
+      "high": 20,
+      "label": "14-20",
+      "range_label": "14 to 21 days",
+      "count": 1,
+      "issues": [
+        "#102"
+      ]
+    },
+    {
+      "low": 21,
+      "high": 27,
+      "label": "21-27",
+      "range_label": "21 to 28 days",
+      "count": 0,
+      "issues": []
+    },
+    {
+      "low": 28,
+      "high": 34,
+      "label": "28-34",
+      "range_label": "28 to 35 days",
+      "count": 0,
+      "issues": []
+    },
+    {
+      "low": 35,
+      "high": 41,
+      "label": "35-41",
+      "range_label": "35 to 42 days",
+      "count": 0,
+      "issues": []
+    },
+    {
+      "low": 42,
+      "high": 48,
+      "label": "42-48",
+      "range_label": "42 to 49 days",
+      "count": 1,
+      "issues": [
+        "#101"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "number": 101,
+      "title": "Add pagination to the widget list",
+      "url": "https://github.com/acme/widgets/issues/101",
+      "repo": "acme/widgets",
+      "days": 42.12,
+      "days_display": "42.1",
+      "entered_date": "2026-05-04",
+      "bar_pct": 100.0,
+      "is_batch": false
+    },
+    {
+      "number": 102,
+      "title": "Fix off-by-one in the date picker",
+      "url": "https://github.com/acme/widgets/issues/102",
+      "repo": "acme/widgets",
+      "days": 14.12,
+      "days_display": "14.1",
+      "entered_date": "2026-06-01",
+      "bar_pct": 33.5,
+      "is_batch": false
+    },
+    {
+      "number": 103,
+      "title": "Refactor the export job",
+      "url": "https://github.com/acme/widgets/issues/103",
+      "repo": "acme/widgets",
+      "days": 6.12,
+      "days_display": "6.1",
+      "entered_date": "2026-06-09",
+      "bar_pct": 14.5,
+      "is_batch": false
+    },
+    {
+      "number": 105,
+      "title": "Rework the settings drawer",
+      "url": "https://github.com/acme/widgets/issues/105",
+      "repo": "acme/widgets",
+      "days": 4.12,
+      "days_display": "4.1",
+      "entered_date": "2026-06-11",
+      "bar_pct": 9.8,
+      "is_batch": false
+    },
+    {
+      "number": 104,
+      "title": "Upgrade the build toolchain",
+      "url": "https://github.com/acme/widgets/issues/104",
+      "repo": "acme/widgets",
+      "days": 2.12,
+      "days_display": "2.1",
+      "entered_date": "2026-06-13",
+      "bar_pct": 5.0,
+      "is_batch": false
+    }
+  ],
+  "unknown": [],
+  "axis": {
+    "bin_days": 7,
+    "banded_days": null,
+    "y_max": 5,
+    "y_ticks": [
+      0,
+      5
+    ],
+    "threshold_days": 14
+  },
+  "batch_days": []
+}

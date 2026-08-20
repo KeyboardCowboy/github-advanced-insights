@@ -1,0 +1,4 @@
+# normalize and build write here when the tests run. The committed truth is
+# expected/, not whatever the last run happened to produce.
+workspace/cache/*-view-model.json
+workspace/cache/*.html

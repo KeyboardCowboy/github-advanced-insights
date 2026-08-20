@@ -1,0 +1,13 @@
+{
+  "projects": [
+    {
+      "id": "acme-board",
+      "label": "Acme Delivery",
+      "account": null,
+      "owner": "acme",
+      "owner_type": "organization",
+      "project_number": 1
+    }
+  ],
+  "default_project": "acme-board"
+}

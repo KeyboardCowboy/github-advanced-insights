@@ -1,0 +1,186 @@
+{
+  "header": {
+    "board_number": 1,
+    "board_title": "Acme Delivery",
+    "status": "In QA",
+    "filter": "status:\"In QA\" is:open",
+    "updated_iso": "2026-06-15T12:00:00+00:00",
+    "updated_display": "15 Jun 2026, 12:00 UTC"
+  },
+  "copy": {
+    "title": "Overflow",
+    "info_html": "",
+    "notes": [
+      "**Wall-clock days, not business days.** A three-week wait includes three weekends.",
+      "**Only the current stint counts.** A ticket that left In QA and came back is aged from its latest entry, not its first.",
+      "**Nothing is estimated.** All 6 tickets had a usable entry event in their GitHub timeline."
+    ]
+  },
+  "stats": [
+    {
+      "label": "Tickets",
+      "value": "6",
+      "unit": "",
+      "note": "tickets in this set"
+    },
+    {
+      "label": "Median wait",
+      "value": "3.1",
+      "unit": "d",
+      "note": "half have waited longer"
+    },
+    {
+      "label": "Oldest",
+      "value": "56",
+      "unit": "d",
+      "note": "#506"
+    },
+    {
+      "label": "Over 5 days",
+      "value": "2",
+      "unit": "",
+      "note": "33% of the set"
+    }
+  ],
+  "bins": [
+    {
+      "low": 0,
+      "high": 0,
+      "label": "0",
+      "range_label": "0 to 1 days",
+      "count": 1,
+      "issues": [
+        "#501"
+      ]
+    },
+    {
+      "low": 1,
+      "high": 1,
+      "label": "1",
+      "range_label": "1 to 2 days",
+      "count": 1,
+      "issues": [
+        "#502"
+      ]
+    },
+    {
+      "low": 2,
+      "high": 2,
+      "label": "2",
+      "range_label": "2 to 3 days",
+      "count": 1,
+      "issues": [
+        "#503"
+      ]
+    },
+    {
+      "low": 3,
+      "high": 3,
+      "label": "3",
+      "range_label": "3 to 4 days",
+      "count": 0,
+      "issues": []
+    },
+    {
+      "low": 4,
+      "high": 4,
+      "label": "4",
+      "range_label": "4 to 5 days",
+      "count": 1,
+      "issues": [
+        "#504"
+      ]
+    },
+    {
+      "low": 5,
+      "high": null,
+      "label": "5+",
+      "range_label": "5 days or more",
+      "count": 2,
+      "issues": [
+        "#506",
+        "#505"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "number": 506,
+      "title": "Ticket aged 6",
+      "url": "https://github.com/acme/widgets/issues/506",
+      "repo": "acme/widgets",
+      "days": 56.12,
+      "days_display": "56.1",
+      "entered_date": "2026-04-20",
+      "bar_pct": 100.0,
+      "is_batch": false
+    },
+    {
+      "number": 505,
+      "title": "Ticket aged 5",
+      "url": "https://github.com/acme/widgets/issues/505",
+      "repo": "acme/widgets",
+      "days": 14.12,
+      "days_display": "14.1",
+      "entered_date": "2026-06-01",
+      "bar_pct": 25.2,
+      "is_batch": false
+    },
+    {
+      "number": 504,
+      "title": "Ticket aged 4",
+      "url": "https://github.com/acme/widgets/issues/504",
+      "repo": "acme/widgets",
+      "days": 4.12,
+      "days_display": "4.1",
+      "entered_date": "2026-06-11",
+      "bar_pct": 7.3,
+      "is_batch": false
+    },
+    {
+      "number": 503,
+      "title": "Ticket aged 3",
+      "url": "https://github.com/acme/widgets/issues/503",
+      "repo": "acme/widgets",
+      "days": 2.12,
+      "days_display": "2.1",
+      "entered_date": "2026-06-13",
+      "bar_pct": 3.8,
+      "is_batch": false
+    },
+    {
+      "number": 502,
+      "title": "Ticket aged 2",
+      "url": "https://github.com/acme/widgets/issues/502",
+      "repo": "acme/widgets",
+      "days": 1.12,
+      "days_display": "1.1",
+      "entered_date": "2026-06-14",
+      "bar_pct": 2.0,
+      "is_batch": false
+    },
+    {
+      "number": 501,
+      "title": "Ticket aged 1",
+      "url": "https://github.com/acme/widgets/issues/501",
+      "repo": "acme/widgets",
+      "days": 0.12,
+      "days_display": "0.1",
+      "entered_date": "2026-06-15",
+      "bar_pct": 0.2,
+      "is_batch": false
+    }
+  ],
+  "unknown": [],
+  "axis": {
+    "bin_days": 1,
+    "banded_days": 5,
+    "y_max": 5,
+    "y_ticks": [
+      0,
+      5
+    ],
+    "threshold_days": 5
+  },
+  "batch_days": []
+}

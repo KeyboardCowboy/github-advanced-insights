@@ -1,0 +1,12 @@
+{
+  "fetched_at": "2026-06-15T12:00:00+00:00",
+  "board": {
+    "number": 1,
+    "title": "Acme Delivery"
+  },
+  "filter": "status:\"Done\" is:open",
+  "measure_status": "Done",
+  "project": "acme-board",
+  "issue_ids": [],
+  "timelines": {}
+}

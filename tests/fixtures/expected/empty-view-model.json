@@ -1,0 +1,58 @@
+{
+  "header": {
+    "board_number": 1,
+    "board_title": "Acme Delivery",
+    "status": "Done",
+    "filter": "status:\"Done\" is:open",
+    "updated_iso": "2026-06-15T12:00:00+00:00",
+    "updated_display": "15 Jun 2026, 12:00 UTC"
+  },
+  "copy": {
+    "title": "Empty",
+    "info_html": "",
+    "notes": [
+      "**Wall-clock days, not business days.** A three-week wait includes three weekends.",
+      "**Only the current stint counts.** A ticket that left Done and came back is aged from its latest entry, not its first."
+    ]
+  },
+  "stats": [
+    {
+      "label": "Tickets",
+      "value": "0",
+      "unit": "",
+      "note": "tickets in this set"
+    },
+    {
+      "label": "Median wait",
+      "value": "0.0",
+      "unit": "d",
+      "note": "half have waited longer"
+    },
+    {
+      "label": "Oldest",
+      "value": "0",
+      "unit": "d",
+      "note": "no tickets"
+    },
+    {
+      "label": "Over 14 days",
+      "value": "0",
+      "unit": "",
+      "note": "0% of the set"
+    }
+  ],
+  "bins": [],
+  "rows": [],
+  "unknown": [],
+  "axis": {
+    "bin_days": 7,
+    "banded_days": null,
+    "y_max": 5,
+    "y_ticks": [
+      0,
+      5
+    ],
+    "threshold_days": 14
+  },
+  "batch_days": []
+}

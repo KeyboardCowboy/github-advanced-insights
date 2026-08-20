@@ -209,8 +209,18 @@ python3 -m unittest discover
 
 From the repo root, nothing to install. It needs no network, no credentials, and no
 GitHub board — it runs against synthetic fixtures, so it behaves the same on your machine
-as it does in CI, and a fork's pull request passes without any access to secrets. See
-[tests/README.md](tests/README.md) for how the fixtures and goldens work.
+as it does in CI, and a fork's pull request passes without any access to secrets.
+
+There is a second suite covering the parts that only exist once JavaScript runs. It needs
+Playwright, and skips cleanly when that is absent, so the command above works either way:
+
+```bash
+pip install -r requirements-dev.txt && playwright install chromium
+python3 -m unittest discover -s tests/browser -t .
+```
+
+See [tests/README.md](tests/README.md) for how the fixtures, goldens, and the offline
+GitHub stub work.
 
 Put closing keywords like `Closes #12` in the pull request description rather than in a
 commit message; a squash merge can rewrite the commit, and the PR body is read at merge

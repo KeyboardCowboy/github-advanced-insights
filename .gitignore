@@ -8,3 +8,8 @@
 # Python bytecode.
 __pycache__/
 *.py[cod]
+
+# Virtualenv for the browser tests. Ignored here rather than relying on a
+# personal global ignore, which a contributor following requirements-dev.txt
+# has no reason to share.
+.venv/

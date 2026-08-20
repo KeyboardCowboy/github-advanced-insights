@@ -42,3 +42,26 @@ jobs:
       # dependency file to cache and nothing to resolve.
       - name: Run tests
         run: python3 -m unittest discover -v
+
+  browser:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      # A separate job, not another matrix leg, because this one is the only
+      # thing in the repo that installs anything. Keeping it apart means the
+      # offline suite still proves it runs with no dependencies at all -- if
+      # both lived in one job, that claim would quietly stop being tested.
+      - name: Install Playwright
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-dev.txt
+          python3 -m playwright install --with-deps chromium
+
+      - name: Run browser tests
+        run: python3 -m unittest discover -v -s tests/browser -t .

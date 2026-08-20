@@ -87,3 +87,63 @@ decided it should, and the diff is where a reviewer sees it.
 `now()` into the age calculation, these tests fail — that is them working, and
 regenerating would erase the signal rather than fix anything. Read the diff before
 reaching for `--update-goldens`.
+
+## Browser tests
+
+`tests/browser/` covers what only exists once JavaScript runs: the report page,
+the report form, and settings. These need Playwright, which the tool itself does
+not:
+
+```bash
+pip install -r requirements-dev.txt
+playwright install chromium
+python3 -m unittest discover -s tests/browser -t .
+```
+
+Without Playwright they skip rather than fail, so `python3 -m unittest discover`
+still works on a plain checkout. That is the property worth protecting: the
+offline suite has to keep running with nothing installed, which is why CI runs
+the two in separate jobs rather than adding a leg to the matrix.
+
+### Why these exist
+
+Unit tests cannot see the bugs that lived here. #21 was a project field the form
+displayed correctly and never saved — and it had two independent causes, the
+second found only because fixing the first did not fix the symptom. #20 was a
+button wired to a saved record that did nothing before one existed. In both the
+Python was fine; the fault was in the wiring, which only exists once the page
+runs.
+
+So these assert against `projects.json` and `accounts.json` **on disk** wherever
+they can. A page that shows the right thing and writes the wrong thing is the
+exact failure being guarded against, and a test that only reads the form would
+have passed on both bugs.
+
+### No network
+
+`fake_github.py` replaces `github.graphql`, the single seam every network call
+passes through, so there is no mock HTTP server and no request interception.
+
+It has to be installed **before** the tool is imported. Every module does
+`from github import graphql`, which copies the reference into its own namespace
+at import time; patching afterwards rebinds a name nobody reads any more while
+the live function stays wired up. `serve_stub.py` patches first and imports
+second, and that ordering is the reason it is a separate file rather than a few
+lines in the harness.
+
+The stub raises on a query it does not recognise rather than returning an empty
+result, so teaching it about a new call is a clear error rather than a confusing
+assertion failure three layers away.
+
+### Waiting
+
+Prefer `expect(locator)` over reading state straight after an action. Two traps
+already caught here:
+
+- `aria-current` on a sidebar link flips when the sidebar redraws, which happens
+  *before* the view model arrives. It means "selected", not "drawn" — asserting
+  on the chart right after it reads the previous report.
+- A successful save re-renders the list, or navigates. The card being driven is
+  replaced and its result box never appears; only failures report in place.
+  Waiting for the wrong one of those burns the full timeout and reads as a hang
+  rather than as the failure it is.

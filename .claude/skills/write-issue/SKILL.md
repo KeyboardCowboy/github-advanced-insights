@@ -25,9 +25,10 @@ verbatim.** Do not work from memory or from a copy embedded anywhere else. These
 templates get edited, and an issue written against a stale idea of them creates
 exactly the inconsistency they exist to prevent.
 
-The headings in the template are the sections your body needs. Copy them at the
-level the template uses — that is not the same across all four, so read rather
-than assume. Where a template offers a checkbox list, tick one from the list
+The headings in the template are the sections your body needs. Copy them at
+whatever level the template uses; they are all `##` today, but read rather than
+assume, since that is a formatting choice which can change. Where a template
+offers a checkbox list, tick one from the list
 rather than writing your own wording; those vocabularies stay scannable only if
 everyone uses them.
 

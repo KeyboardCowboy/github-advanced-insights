@@ -4,7 +4,7 @@ about: Notes, ADRs, and information about the project
 labels: '#Documentation'
 ---
 
-### What kind
+## What kind
 
 <!-- Tick one. -->
 
@@ -13,11 +13,11 @@ labels: '#Documentation'
 - [ ] Something is unclear
 - [ ] A decision worth recording (ADR)
 
-### Where
+## Where
 
 <!-- README.md, docs/github-api-notes.md, a code comment, or new. -->
 
-### Detail
+## Detail
 
 <!--
 For a correction, what it says now and what it should say. For a decision, what

@@ -4,13 +4,13 @@ about: Generic work item
 labels: '#Task'
 ---
 
-### What needs doing
+## What needs doing
 
-### Why
+## Why
 
 <!-- Context a stranger would need. The reason is rarely obvious later. -->
 
-### Done when
+## Done when
 
 <!-- How someone else can tell this is finished. -->
 

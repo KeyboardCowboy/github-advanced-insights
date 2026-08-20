@@ -653,6 +653,7 @@
   // artifact gets a 404 here and falls through to its baked-in data island.
   // ======================================================================
   const LAST_REPORT_KEY = "ticket-aging:last-report";
+  const SCOPE_KEY = "ticket-aging:scope";
   let summaries = [];
   let currentSlug = null;
 
@@ -670,6 +671,31 @@
   /** Which account and project the sidebar is filtered to. Null means "all",
    *  which is what a single-account, single-project setup always shows. */
   const scope = { account: null, project: null };
+
+  function saveScope() {
+    localStorage.setItem(SCOPE_KEY, JSON.stringify(scope));
+  }
+
+  /** Restore a remembered filter, dropping anything it names that is now gone.
+   *
+   *  Settings can delete or rename an account or project between visits, and a
+   *  filter naming one that no longer exists matches nothing -- the sidebar
+   *  would come back empty with nothing on screen to explain why. So each half
+   *  is checked against what the current reports actually reference, and falls
+   *  back to "All" on its own rather than dragging the other one down with it.
+   */
+  function restoreScope() {
+    let saved;
+    try {
+      saved = JSON.parse(localStorage.getItem(SCOPE_KEY) || "{}") || {};
+    } catch {
+      saved = {};   // hand-edited or written by an older version: start at "All"
+    }
+    scope.account = saved.account
+      && summaries.some(r => r.account === saved.account) ? saved.account : null;
+    scope.project = saved.project
+      && summaries.some(r => r.project === saved.project) ? saved.project : null;
+  }
 
   function drawScopeFilters() {
     const accounts = [...new Map(summaries.map(r =>
@@ -702,12 +728,24 @@
     for (const key of ["account", "project"]) {
       const select = $(`scope-${key}`);
       if (!select) continue;
-      select.addEventListener("change", () => {
+      select.addEventListener("change", async () => {
         scope[key] = select.value || null;
         // Narrowing the account can orphan the project selection.
         if (key === "account") scope.project = null;
         drawScopeFilters();
         drawSidebar();
+        // After drawScopeFilters, which clears a filter that has stopped
+        // offering a choice -- so what gets stored is what is on screen.
+        saveScope();
+
+        // Filtering away the report on screen used to leave the chart showing
+        // one the sidebar no longer lists. Following the filter keeps the two
+        // agreeing, and it is what makes a remembered filter survive: the
+        // stored report is then always one the stored filter can show.
+        const shown = visibleSummaries();
+        if (shown.length && !shown.some(r => r.slug === currentSlug)) {
+          await selectReport(shown[0].slug);
+        }
       });
     }
   }
@@ -810,14 +848,28 @@
 
     summaries = (await response.json()).reports;
     $("sidebar").hidden = false;
-    drawScopeFilters();
-    $("controls").hidden = false;
-    $("refresh").addEventListener("click", refreshCurrent);
+    restoreScope();
 
     const remembered = localStorage.getItem(LAST_REPORT_KEY);
     const initial = summaries.some(r => r.slug === remembered)
       ? remembered
       : summaries[0]?.slug;
+
+    // A remembered filter can hide the remembered report. Something has to
+    // give, and it should be the filter: the report someone was last reading
+    // is the thing they came back for, while a narrowing set on an earlier
+    // visit is easy to have forgotten. Losing the report instead would look
+    // like it had been deleted.
+    if (initial && !visibleSummaries().some(r => r.slug === initial)) {
+      scope.account = null;
+      scope.project = null;
+      saveScope();
+    }
+
+    drawScopeFilters();
+    $("controls").hidden = false;
+    $("refresh").addEventListener("click", refreshCurrent);
+
     if (initial) await selectReport(initial);
   }
 

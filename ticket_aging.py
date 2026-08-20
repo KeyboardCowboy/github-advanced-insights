@@ -422,7 +422,17 @@ def normalize_report(slug):
     raw = json.loads(paths["raw"].read_text())
     project_number = raw["board"]["number"]
     status = definition["measure_status"]
-    now = datetime.now(timezone.utc)
+
+    # A report is a snapshot, so membership and age have to describe the same
+    # moment. Which tickets are in a status is only knowable as of the fetch --
+    # one closed an hour later is still listed here -- so ages are measured from
+    # the fetch too, rather than from now. That also makes this stage a pure
+    # function of the raw file: re-running it after retuning bins or editing
+    # copy reproduces the same numbers instead of quietly shifting every age.
+    snapshot_at = (
+        parse_ts(raw["fetched_at"]) if raw.get("fetched_at")
+        else datetime.now(timezone.utc)
+    )
 
     if "issue_ids" not in raw:
         sys.exit(
@@ -444,7 +454,7 @@ def normalize_report(slug):
             unknown.append({"number": timeline["number"], "title": timeline["title"]})
             continue
 
-        days = (now - entered).total_seconds() / 86400
+        days = (snapshot_at - entered).total_seconds() / 86400
         rows.append({
             "number": timeline["number"],
             "title": timeline["title"],
@@ -483,15 +493,14 @@ def normalize_report(slug):
         rows, unknown, batch_days, status, definition["threshold_days"]
     )
 
-    fetched = parse_ts(raw["fetched_at"]) if raw.get("fetched_at") else now
     view_model = {
         "header": {
             "board_number": project_number,
             "board_title": raw["board"]["title"],
             "status": status,
             "filter": definition["filter"],
-            "updated_iso": fetched.isoformat(),
-            "updated_display": fetched.strftime("%d %b %Y, %H:%M UTC"),
+            "updated_iso": snapshot_at.isoformat(),
+            "updated_display": snapshot_at.strftime("%d %b %Y, %H:%M UTC"),
         },
         "copy": copy,
         "stats": build_stats(

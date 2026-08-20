@@ -20,6 +20,12 @@ The templates live in `.github/ISSUE_TEMPLATE/`, as plain markdown:
 | `3-task.md` | Task | `#Task` |
 | `4-documentation.md` | Documentation | `#Documentation` |
 
+There is no template for an Epic, because an epic is written by hand once its
+sub-issues are known. Label it `#Epic`, set its Issue Type to Epic, and give it a
+table of its sub-issues with their dependency order, so a reader can tell where to
+start. Link the children with `addSubIssue` rather than only listing them, so
+GitHub tracks the progress.
+
 **Read the file for the type you are writing, every time, and use its headings
 verbatim.** Do not work from memory or from a copy embedded anywhere else. These
 templates get edited, and an issue written against a stale idea of them creates

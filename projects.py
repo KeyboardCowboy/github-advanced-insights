@@ -10,19 +10,15 @@ tool sharing a single implicit target that can be repointed underneath it.
 repositories, and issues are fetched by node id, so the tool never needs to know
 where an issue lives. Each issue's repository and URL come back from the API.
 
-Projects live in `projects.json` beside this file, which is committed:
-configuration a teammate needs on clone, not derived data. Reports stay one file
+Projects live in the workspace (see `workspace.py`), which is gitignored by this
+repository and shareable as one of its own. Reports stay one file
 each in `definitions/`, so two people adding two reports still touch two
 different files and merge cleanly.
 """
 import json
 import os
 import re
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent
-PROJECTS_PATH = BASE_DIR / "projects.json"
-LEGACY_CONNECTIONS_PATH = BASE_DIR / "connections.json"
+from workspace import PROJECTS_PATH
 
 OWNER_TYPES = ("organization", "user")
 
@@ -41,8 +37,6 @@ EMPTY = {"projects": [], "default_project": None}
 
 def load_projects():
     """The whole projects document, migrating a legacy config.json if needed."""
-    if not PROJECTS_PATH.exists() and LEGACY_CONNECTIONS_PATH.exists():
-        _migrate_connections()
     if not PROJECTS_PATH.exists():
         return dict(EMPTY)
     return {**EMPTY, **json.loads(PROJECTS_PATH.read_text())}
@@ -172,26 +166,3 @@ def _write(document):
     temp_path = PROJECTS_PATH.with_suffix(".json.tmp")
     temp_path.write_text(json.dumps(document, indent=2) + "\n")
     os.replace(temp_path, PROJECTS_PATH)
-
-
-def _migrate_connections():
-    """Fold connections.json into projects.json, dropping the repository.
-
-    `repo` is not carried over: issues are fetched by node id now, so a board
-    that spans repositories works without the tool naming one.
-    """
-    legacy = json.loads(LEGACY_CONNECTIONS_PATH.read_text())
-    migrated = []
-    for record in legacy.get("connections", []):
-        migrated.append({
-            "id": record["id"],
-            "label": record.get("label", record["id"]),
-            "owner": record["owner"],
-            "owner_type": record.get("owner_type", "organization"),
-            "project_number": record["project"],
-        })
-    _write({
-        "projects": migrated,
-        "default_project": legacy.get("default_project")
-        or (migrated[0]["id"] if migrated else None),
-    })

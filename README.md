@@ -89,10 +89,44 @@ second path is what makes a built `cache/<slug>.html` shareable as a standalone 
 template also renders correctly against an *empty* model, showing zeros, so it can be
 opened before anything has been fetched.
 
-## Configuration
+## The workspace
 
-Everything is JSON on disk, committed alongside the code, and editable either through the
-UI or by hand. The two routes write the same files.
+Code and data are separate. Everything specific to *your* installation lives in
+`workspace/`, which this repository gitignores:
+
+```
+workspace/
+  accounts.json     personal    which credential you use
+  projects.json     shareable   which boards to read
+  definitions/      shareable   the reports themselves
+  cache/            derived     regenerated on demand
+```
+
+It is created on first run. Set `GH_INSIGHTS_HOME` to keep it somewhere else, such as a
+checkout of a team configuration repository.
+
+Because the workspace is gitignored here, pulling an update never conflicts with your
+configuration, and contributing a change never carries your board identifiers with it.
+
+### Sharing reports with a team
+
+Make the workspace its own repository:
+
+```
+cd workspace && git init && git remote add origin <your-config-repo>
+```
+
+Teammates clone this tool, clone that workspace into it, and add their own account.
+
+**One part stays personal.** `accounts.json` maps an account id to *your* credential, so
+sharing it would hand a teammate your login rather than theirs. A shared `projects.json`
+names an account by **id**; each person's local `accounts.json` satisfies that id with
+their own `gh` login or environment variable. The id is the contract, the credential is
+not. A `.gitignore` written inside the workspace enforces this, so nobody has to remember.
+
+## Configuration files
+
+Editable through the UI or by hand; the two routes write the same files.
 
 - **`accounts.json`** — where credentials come from. Records a *source*, never a token:
   a `gh` login (`gh_account`) or an environment variable name (`token_env`).

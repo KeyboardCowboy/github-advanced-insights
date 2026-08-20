@@ -1,5 +1,9 @@
-# Fetched and derived data. Regenerated on demand by ticket_aging.py.
-cache/
+# This installation's data: accounts, projects, reports, and cache.
+# Gitignored here so an upstream pull never conflicts with local configuration
+# and a contribution never carries someone's board identifiers. To share a set
+# of reports, make this directory its own repository; the .gitignore written
+# inside it keeps the personal and derived files out.
+workspace/
 
 # Python bytecode.
 __pycache__/

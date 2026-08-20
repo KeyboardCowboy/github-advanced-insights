@@ -31,6 +31,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import workspace
 from accounts import (
     delete_account,
     describe_source,
@@ -591,11 +592,16 @@ def main():
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
 
+    # A fresh clone has no workspace; create it rather than failing, so the
+    # first run lands on the settings page instead of a stack trace.
+    workspace.ensure()
+
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     slugs = available_slugs()
     boards = list_projects()
 
     print(f"\nWork Item Age by Status — http://localhost:{args.port}")
+    print(f"  workspace: {workspace.describe()}")
     if boards:
         for board in boards:
             source = describe_source(get_account(board.get("account")))

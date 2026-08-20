@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Named GitHub accounts: where each project's credential comes from.
 
-An account records a *source* for a token, never a token. `accounts.json` is
-committed alongside the projects that reference it, so a secret in it would be a
-secret in git. Two sources are supported:
+An account records a *source* for a token, never a token. this file can end up in a shared
+workspace repository, so a secret in it would be a secret in git. Two sources are supported:
 
     {"gh_account": "KeyboardCowboy"}   -> gh auth token --user KeyboardCowboy
     {"token_env": "GH_TOKEN_WORK"}     -> read that environment variable
@@ -21,10 +20,7 @@ import os
 import re
 import subprocess
 import sys
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent
-ACCOUNTS_PATH = BASE_DIR / "accounts.json"
+from workspace import ACCOUNTS_PATH
 
 ID_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 LOGIN_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")

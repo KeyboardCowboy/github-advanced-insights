@@ -153,8 +153,10 @@
     <h2>Accounts</h2>
     <p class="card-sub">
       Where each project's credential comes from. An account records a
-      <em>source</em>, never a token: this file is committed. Leave both fields empty to
-      use whichever account <code>gh</code> is currently logged in as.
+      <em>source</em>, never a token. This is the one part of a workspace that stays
+      personal: projects name an account by <em>id</em>, and each person maps that id to
+      their own credential. Leave both fields empty to use whichever account
+      <code>gh</code> is currently logged in as.
     </p>
     <div id="account-list"></div>
     <div class="actions"><button type="button" id="add-account">Add an account</button></div>
@@ -163,9 +165,9 @@
   <section class="card">
     <h2>Projects</h2>
     <p class="card-sub">
-      Saved to <code>projects.json</code>, which is committed so a teammate
-      gets it on clone. Data is read with your <code>gh</code> credentials; nothing here
-      stores a token.
+      Saved to <code>workspace/projects.json</code>. The workspace is gitignored by the
+      tool's repository; make it a repository of its own to share a set of reports with
+      teammates.
     </p>
     <div id="project-list"></div>
     <div class="actions">

@@ -54,18 +54,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # The timeline fetcher is shared with status_history.py rather than restated.
+import workspace
 from github import GitHubError, graphql
 from projects import account_for, get_project, list_projects, owner_scope
 from markup import render as render_markup
 from status_history import fetch_histories, parse_ts
 
-# Everything the tool needs sits beside this file, so the whole thing can be
-# moved or copied as a unit without rewiring paths.
+# Templates ship with the code; everything else lives in the workspace, which is
+# this installation's data and is gitignored here.
 BASE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BASE_DIR
-CACHE_DIR = BASE_DIR / "cache"
-REPORTS_DIR = BASE_DIR / "definitions"
 VIEW_TEMPLATE = BASE_DIR / "views" / "ticket-aging.html"
+CACHE_DIR = workspace.CACHE_DIR
+REPORTS_DIR = workspace.DEFINITIONS_DIR
 
 # Definition defaults, applied when a report file omits them.
 REPORT_DEFAULTS = DEFAULTS = {
@@ -183,7 +184,12 @@ def list_reports():
     """Show each definition's filter and what it measures."""
     slugs = ordered_slugs()
     if not slugs:
-        sys.exit(f"No report definitions in {REPORTS_DIR}")
+        # A fresh clone lands here. Point at the next step rather than exiting
+        # with a bare path.
+        print(f"\nNo reports yet in {REPORTS_DIR}.\n")
+        print("  Start the server and add a project, then a report:")
+        print("    python3 ticket_aging_server.py\n")
+        return
 
     print(f"\n{len(slugs)} report(s) in {REPORTS_DIR.relative_to(REPO_ROOT)}, "
           "in board workflow order:\n")
@@ -618,6 +624,7 @@ def main():
     )
 
     args = parser.parse_args()
+    workspace.ensure()
     if args.handler is None:
         list_reports()
     else:

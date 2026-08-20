@@ -205,14 +205,14 @@
       </summary>
     <div class="row">
       <div class="field">
-        <label>Account id</label>
-        <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">A short name you will pick from when setting up a project.</span>
+        <label>Label</label>
+        <input name="label" autocomplete="off" placeholder="e.g. Work laptop">
+        <span class="hint">A friendly name, shown in this list.</span>
       </div>
       <div class="field">
-        <label>Label</label>
-        <input name="label" autocomplete="off" placeholder="e.g. Work">
-        <span class="hint">A friendlier name, shown in this list.</span>
+        <label>Account id</label>
+        <input name="id" autocomplete="off" spellcheck="false" required>
+        <span class="hint id-hint">Filled in from the label. Edit it if you prefer.</span>
       </div>
     </div>
     <div class="row">
@@ -251,14 +251,14 @@
 
     <div class="row">
       <div class="field">
-        <label>Project id</label>
-        <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">A short name reports use to point at this board.</span>
+        <label>Label</label>
+        <input name="label" autocomplete="off" placeholder="e.g. Development">
+        <span class="hint">A friendly name, shown in the sidebar.</span>
       </div>
       <div class="field">
-        <label>Label</label>
-        <input name="label" autocomplete="off">
-        <span class="hint">A friendlier name, shown in the sidebar.</span>
+        <label>Project id</label>
+        <input name="id" autocomplete="off" spellcheck="false" required>
+        <span class="hint id-hint">Filled in from the label. Edit it if you prefer.</span>
       </div>
     </div>
 
@@ -325,6 +325,29 @@
   // against a different value than the one on screen.
   const FIELDS = ["id", "label", "account", "owner", "owner_type", "project_number"];
 
+  /** A machine-readable id from a human label: lowercase, hyphen-separated. */
+  function slugify(text) {
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "").slice(0, 64);
+  }
+
+  /** Fill the id from the label while creating, until the user edits it.
+   *
+   *  Ids are machine names that nothing but the tool reads, so typing one by
+   *  hand is busywork. It stops following the label the moment the user types
+   *  in the id field, so a deliberate choice is never overwritten. Existing
+   *  records are untouched: their id is frozen once saved, because projects and
+   *  reports reference it. */
+  function linkIdToLabel(form) {
+    const label = form.elements.label;
+    const id = form.elements.id;
+    let userEditedId = false;
+    id.addEventListener("input", () => { userEditedId = true; });
+    label.addEventListener("input", () => {
+      if (!userEditedId) id.value = slugify(label.value);
+    });
+  }
+
   const escapeHtml = t => String(t).replace(/[&<>"]/g,
     c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -362,7 +385,8 @@
     // The id is referenced by every report that uses this project, so it is
     // fixed once saved. Renaming would orphan those references silently.
     form.elements.id.readOnly = !isNew;
-    if (!isNew) form.querySelector(".id-hint").textContent = "Fixed once saved.";
+    if (isNew) linkIdToLabel(form);
+    else form.querySelector(".id-hint").textContent = "Fixed once saved.";
 
     const accountSelect = form.elements.account;
     accountSelect.innerHTML = '<option value="">Default account</option>'
@@ -519,7 +543,8 @@
       if (account[name]) form.elements[name].value = account[name];
     }
     form.elements.id.readOnly = !isNew;
-    if (!isNew) form.querySelector(".id-hint").textContent = "Fixed once saved.";
+    if (isNew) linkIdToLabel(form);
+    else form.querySelector(".id-hint").textContent = "Fixed once saved.";
 
     const uses = account.projects || [];
     form.querySelector(".uses").textContent = isNew
@@ -587,7 +612,7 @@
     const form = renderAccount({}, false, true);
     accountList.appendChild(form);
     form.scrollIntoView({ behavior: "smooth", block: "center" });
-    form.elements.id.focus();
+    form.elements.label.focus();
   });
 
   async function load() {
@@ -615,7 +640,7 @@
     const form = renderProject({ owner_type: "organization" }, false, true);
     list.appendChild(form);
     form.scrollIntoView({ behavior: "smooth", block: "center" });
-    form.elements.id.focus();
+    form.elements.label.focus();
   });
 
   load();

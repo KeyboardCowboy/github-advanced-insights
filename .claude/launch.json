@@ -4,8 +4,10 @@
     {
       "name": "work-item-age",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["ticket_aging_server.py", "--port", "8080"],
-      "port": 8080
+      "runtimeArgs": [
+        "ticket_aging_server.py"
+      ],
+      "autoPort": true
     }
   ]
 }

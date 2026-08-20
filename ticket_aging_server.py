@@ -25,6 +25,7 @@ Usage:
 """
 import argparse
 import json
+import os
 import re
 import sys
 import threading
@@ -589,7 +590,10 @@ def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("--port", type=int, default=8080)
+    parser.add_argument(
+        "--port", type=int, default=int(os.environ.get("PORT") or 8080),
+        help="Port to listen on. Defaults to $PORT, then 8080.",
+    )
     args = parser.parse_args()
 
     # A fresh clone has no workspace; create it rather than failing, so the

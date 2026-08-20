@@ -1,0 +1,44 @@
+name: Tests
+
+# Push covers main directly; pull_request covers everything on its way there,
+# including forks. A fork's PR runs with a read-only token and no access to
+# secrets — which this workflow relies on, since it needs neither.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Superseded runs are wasted work: a second push to a branch makes the first
+# run's answer irrelevant before it finishes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      # One version failing should still report the others, so a break that is
+      # specific to the floor is distinguishable from one that is not.
+      fail-fast: false
+      matrix:
+        # The floor the README promises, and the current release. The floor is
+        # the point of the matrix: nothing else checks that claim, and it would
+        # otherwise rot the first time someone writes newer syntax.
+        python-version: ["3.9", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # No install step. The tool and its tests are stdlib only, so there is no
+      # dependency file to cache and nothing to resolve.
+      - name: Run tests
+        run: python3 -m unittest discover -v

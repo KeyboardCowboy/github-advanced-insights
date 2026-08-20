@@ -1,5 +1,7 @@
 # Work Item Age
 
+[![Tests](https://github.com/KeyboardCowboy/github-advanced-insights/actions/workflows/ci.yml/badge.svg)](https://github.com/KeyboardCowboy/github-advanced-insights/actions/workflows/ci.yml)
+
 A small, local tool that answers one question about a GitHub Projects v2 board:
 **how long has each unfinished ticket been sitting where it is?**
 

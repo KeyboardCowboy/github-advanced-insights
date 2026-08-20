@@ -164,9 +164,9 @@
   <header class="masthead">
     <h1>Settings</h1>
     <p class="metric-def">
-      Named Projects v2 boards. Each report is written against one board's status
-      vocabulary, so every report names the project it reads. No repository is
-      stored: a board can span several, and issues are fetched by id.
+      Which GitHub boards this tool reads, and which login it uses for each.
+      A report always belongs to one board, because it is built around that
+      board's status names.
     </p>
     <a class="backlink" href="/">&larr; Back to reports</a>
   </header>
@@ -174,11 +174,9 @@
   <section class="card">
     <h2>Accounts</h2>
     <p class="card-sub">
-      Where each project's credential comes from. An account records a
-      <em>source</em>, never a token. This is the one part of a workspace that stays
-      personal: projects name an account by <em>id</em>, and each person maps that id to
-      their own credential. Leave both fields empty to use whichever account
-      <code>gh</code> is currently logged in as.
+      A login this tool can read GitHub with. No password or token is stored here,
+      only a pointer to one you already have. Leave both fields empty to use whoever
+      is currently signed in.
     </p>
     <div id="account-list"></div>
     <div class="actions"><button type="button" id="add-account">Add an account</button></div>
@@ -187,9 +185,8 @@
   <section class="card">
     <h2>Projects</h2>
     <p class="card-sub">
-      Saved to <code>workspace/projects.json</code>. The workspace is gitignored by the
-      tool's repository; make it a repository of its own to share a set of reports with
-      teammates.
+      A GitHub project board to build reports from. Add one per board you want to
+      track.
     </p>
     <div id="project-list"></div>
     <div class="actions">
@@ -210,11 +207,12 @@
       <div class="field">
         <label>Account id</label>
         <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">Referenced by each project.</span>
+        <span class="hint id-hint">A short name you will pick from when setting up a project.</span>
       </div>
       <div class="field">
         <label>Label</label>
-        <input name="label" autocomplete="off">
+        <input name="label" autocomplete="off" placeholder="e.g. Work">
+        <span class="hint">A friendlier name, shown in this list.</span>
       </div>
     </div>
     <div class="row">
@@ -222,13 +220,13 @@
         <label>gh account</label>
         <input name="gh_account" autocomplete="off" spellcheck="false"
                placeholder="e.g. KeyboardCowboy">
-        <span class="hint">Retrieved with <code>gh auth token --user</code>.</span>
+        <span class="hint">Your GitHub username. Uses the login you have already signed in with.</span>
       </div>
       <div class="field">
         <label>or environment variable</label>
         <input name="token_env" autocomplete="off" spellcheck="false"
                placeholder="e.g. GH_TOKEN_WORK">
-        <span class="hint">For CI, or without <code>gh</code> installed.</span>
+        <span class="hint">Instead of the above: the name of a variable holding a token.</span>
       </div>
     </div>
     <p class="uses"></p>
@@ -255,12 +253,12 @@
       <div class="field">
         <label>Project id</label>
         <input name="id" autocomplete="off" spellcheck="false" required>
-        <span class="hint id-hint">Referenced by each report. Lowercase and hyphens.</span>
+        <span class="hint id-hint">A short name reports use to point at this board.</span>
       </div>
       <div class="field">
         <label>Label</label>
         <input name="label" autocomplete="off">
-        <span class="hint">A readable name for this board.</span>
+        <span class="hint">A friendlier name, shown in the sidebar.</span>
       </div>
     </div>
 
@@ -268,7 +266,7 @@
       <div class="field">
         <label>Owner</label>
         <input name="owner" autocomplete="off" spellcheck="false" required>
-        <span class="hint">The organization or user that owns the board.</span>
+        <span class="hint">The GitHub organization or person the board belongs to.</span>
       </div>
       <div class="field">
         <label>Owner type</label>
@@ -276,7 +274,7 @@
           <option value="organization">Organization</option>
           <option value="user">User</option>
         </select>
-        <span class="hint">Wrong choice is an error, not an empty result.</span>
+        <span class="hint">Is that owner an organization or a person? The wrong one fails.</span>
       </div>
     </div>
 
@@ -284,7 +282,7 @@
       <div class="field">
         <label>Account</label>
         <select name="account"></select>
-        <span class="hint">Whose credential reads this board.</span>
+        <span class="hint">Which login to read this board with.</span>
       </div>
     </div>
 
@@ -292,16 +290,16 @@
       <div class="field">
         <label>Project number</label>
         <input name="project_number" type="number" min="1" step="1" required>
-        <span class="hint">From the board URL, or search below.</span>
+        <span class="hint">The number at the end of the board URL, or search below.</span>
       </div>
       <div class="field">
         <label>Find a project</label>
         <input class="board-search" autocomplete="off" placeholder="Search by title">
-        <span class="hint">An owner can have hundreds of boards.</span>
+        <span class="hint">Search by name if you do not know the number.</span>
       </div>
       <div class="field">
         <label>Repositories</label>
-        <p class="hint repos">Test the project to see which repositories it covers.</p>
+        <p class="hint repos">Which repositories this board pulls issues from. Shown after you test.</p>
       </div>
     </div>
 

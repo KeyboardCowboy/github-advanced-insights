@@ -153,7 +153,7 @@
   <header class="masthead">
     <h1 id="page-title">New report</h1>
     <p class="metric-def" id="page-sub">
-      A report ages every ticket in one board status from the moment it last entered it.
+      A report shows how long tickets have been sitting in one board column.
     </p>
     <a class="backlink" href="/">&larr; Back to reports</a>
   </header>
@@ -162,8 +162,8 @@
     <section class="card">
       <h2>Configuration</h2>
       <p class="card-sub">
-        What this report covers. The status clause is generated, so the tickets shown and
-        the age measured can never disagree.
+        Which tickets this report covers. Picking a status both selects the tickets and
+        sets what their age is measured from, so the two always match.
       </p>
 
       <div class="group">
@@ -183,14 +183,14 @@
         <div class="field">
           <label for="measure_status">Status</label>
           <select id="measure_status" name="measure_status" required></select>
-          <span class="hint">Tickets are selected by this status and aged from entry into it.</span>
+          <span class="hint">The board column this covers. Tickets are timed from when they entered it.</span>
         </div>
 
         <div class="field">
           <label for="additional_filter">Additional filter</label>
           <input id="additional_filter" name="additional_filter" autocomplete="off"
                  spellcheck="false" placeholder="is:open -type:Epic,Feature">
-          <span class="hint">Appended to the generated status clause. Leave empty for none.</span>
+          <span class="hint">Optional extra filtering, same syntax as the board search box. The status is added for you.</span>
         </div>
 
         <div class="actions">
@@ -201,28 +201,30 @@
 
       <div class="group">
         <h3 class="section-title">Chart scale</h3>
-        <p class="group-sub">Each column runs on its own timescale, so these are per report.</p>
+        <p class="group-sub">Columns move at different speeds, so each report sets its own scale.</p>
         <div class="row3">
           <div class="field">
             <label for="bin_days">Range per bar (days)</label>
             <input id="bin_days" name="bin_days" type="number" min="1" step="1" required>
+            <span class="hint">How many days each bar covers. 1 shows single days.</span>
           </div>
           <div class="field">
             <label for="max_bars">Max bars</label>
             <input id="max_bars" name="max_bars" type="number" min="1" step="1"
                    placeholder="unlimited">
-            <span class="hint">Empty means bars run to the oldest ticket.</span>
+            <span class="hint">Anything older than the last bar is grouped into it. Empty shows every age.</span>
           </div>
           <div class="field">
             <label for="threshold_days">Threshold (days)</label>
             <input id="threshold_days" name="threshold_days" type="number" min="0" step="1" required>
+            <span class="hint">Draws a line here: the point a wait stops looking normal.</span>
           </div>
         </div>
         <div class="result" id="scale-warning" hidden></div>
         <div class="field" style="margin-top:16px;max-width:200px">
           <label for="order">Sidebar position</label>
           <input id="order" name="order" type="number" step="10" required>
-          <span class="hint">Lower appears first.</span>
+          <span class="hint">Lower numbers appear first.</span>
         </div>
       </div>
     </section>
@@ -238,10 +240,12 @@
           <label for="headline">Title</label>
           <input id="headline" name="headline" autocomplete="off"
                  placeholder="How long has each ticket been waiting?">
+          <span class="hint">The question at the top of the report.</span>
         </div>
         <div class="field">
           <label for="lede">Description</label>
           <textarea id="lede" name="lede" style="min-height:80px"></textarea>
+          <span class="hint">A sentence under the title saying what is counted.</span>
         </div>
       </div>
 
@@ -250,10 +254,12 @@
         <div class="field">
           <label for="chart_title">Chart title</label>
           <input id="chart_title" name="chart_title" autocomplete="off">
+          <span class="hint">Heading above the chart.</span>
         </div>
         <div class="field">
           <label for="chart_sub">Chart description</label>
           <textarea id="chart_sub" name="chart_sub" style="min-height:70px"></textarea>
+          <span class="hint">One line on how to read it.</span>
         </div>
       </div>
 
@@ -262,24 +268,27 @@
         <div class="field">
           <label for="table_title">Table title</label>
           <input id="table_title" name="table_title" autocomplete="off">
+          <span class="hint">Heading above the ticket list.</span>
         </div>
         <div class="field">
           <label for="table_sub">Table description</label>
           <textarea id="table_sub" name="table_sub" style="min-height:70px"></textarea>
+          <span class="hint">One line on how it is sorted.</span>
         </div>
       </div>
 
       <div class="group">
         <h3 class="section-title">Info panel</h3>
         <p class="group-sub">
-          Optional. Appears under "Reading this correctly", above the notes generated from
-          the data. Supports <code>**bold**</code>, <code>*italic*</code>,
-          <code>`code`</code>, <code>- lists</code>, and
+          Optional notes shown at the foot of the report, above the ones written
+          automatically from the data. Supports <code>**bold**</code>,
+          <code>*italic*</code>, <code>`code`</code>, <code>- lists</code>, and
           <code>[links](https://...)</code>.
         </p>
         <div class="field">
           <label for="info_panel">Content</label>
           <textarea id="info_panel" name="info_panel"></textarea>
+          <span class="hint">Context for whoever reads the report. Preview appears below.</span>
         </div>
         <div class="preview" id="info-preview"></div>
       </div>

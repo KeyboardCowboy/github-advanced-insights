@@ -117,16 +117,33 @@ The script adds the issue to the board if it is missing, then sets all three.
 | Status | Backlog, Ready, In Progress, In Review, Done |
 
 New issues normally start in `Backlog`. Move to `In Progress` when you begin work
-on one and `In Review` once it is committed — the board is only useful if it
-tracks reality.
+on one and `In Review` once the pull request is open — the board is only useful
+if it tracks reality. `Done` is not yours to set: the merge closes the issue and
+the board follows.
+
+`In Review` used to mean "committed locally", which was as far as the work got
+before merging went through pull requests. It now means what the column says.
 
 Priority exists as a field but is left to the user; do not guess a ranking.
 
-## Referring to issues from commits
+## Referring to issues from commits and pull requests
 
-`Closes #N` only when the work is verifiable from the commit itself. For anything
-that cannot be confirmed until it reaches GitHub — issue templates, workflow
-files, anything the platform renders — use `Refs #N` and let a human close it.
+**Closing keywords belong in the pull request description, not in a commit
+message.** A squash merge rewrites the commit message, so a `Closes #N` written
+in a commit may not survive into what lands on `main`. The PR body is read by
+GitHub at merge time regardless of merge strategy. Commits on the branch should
+say `Refs #N`; the PR that carries them says `Closes #N`.
+
+CI runs on every pull request, which changes what this rule used to say. The old
+advice was to use `Refs #N` for anything that could not be confirmed until it
+reached GitHub — workflow files, issue templates, anything the platform renders —
+because a local commit could not prove those worked. A PR can: the workflow
+actually runs, the templates actually render. Judge by whether the PR
+demonstrates the work, not by whether your machine could.
+
+What still earns `Refs #N` is work no check exercises — a change whose only
+verification is a person looking at it on GitHub, or one issue advanced by
+several separate PRs.
 
 **Check the number exists before you write it.** A `Closes #N` pointing at a
 number nobody has used yet will silently close whatever unrelated issue is created

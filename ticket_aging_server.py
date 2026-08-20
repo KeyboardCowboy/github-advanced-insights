@@ -9,6 +9,7 @@ anything, but a page served from here can.
   GET  /                            the interface (read live from views/)
   GET  /api/reports                 every definition + its cache freshness
   GET  /api/reports/<slug>          one cached view model
+  POST /api/definitions            create a report, refusing a taken slug
   POST /api/reports/<slug>/refresh  run the pipeline, return the new model
 
 The page works in either context, and decides which at load: if /api/reports
@@ -257,8 +258,11 @@ class Handler(BaseHTTPRequestHandler):
             values = self.read_json_body()
             if values is None:
                 return
+            # PUT updates a report that exists. Creating one is POST
+            # /api/definitions, because this URL cannot express the difference
+            # and guessing it is what let a new report overwrite an old one.
             try:
-                stored = save_report(match.group(1), values)
+                stored = save_report(match.group(1), values, is_new=False)
             except ValueError as exc:
                 return self.send_json(
                     {"error": "invalid", "problems": str(exc).splitlines()}, status=400
@@ -331,6 +335,9 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_json({"deleted": match.group(1)})
 
     def do_POST(self):
+        if self.path == "/api/definitions":
+            return self.create_report()
+
         if self.path == "/api/accounts/test":
             return self.test_account()
 
@@ -428,6 +435,27 @@ class Handler(BaseHTTPRequestHandler):
         found = (data.get(scope) or {}).get("projectV2") or {}
         options = [o["name"] for o in ((found.get("field") or {}).get("options") or [])]
         self.send_json({"statuses": options})
+
+    def create_report(self):
+        """Create a new report, refusing a slug that is already taken.
+
+        The slug is derived here rather than accepted from the client. The form
+        shows the same derivation so the author knows the filename before
+        saving, but the copy that decides whether a file gets overwritten should
+        not be the one a stale page happens to be holding.
+        """
+        values = self.read_json_body()
+        if values is None:
+            return
+
+        title = (values.get("copy") or {}).get("title", "")
+        slug = slug_from_title(title)
+        try:
+            stored = save_report(slug, values, is_new=True)
+        except ValueError as exc:
+            return self.send_json(
+                {"error": "invalid", "problems": str(exc).splitlines()}, status=400)
+        return self.send_json({"slug": slug, "stored": stored}, status=201)
 
     def preview_filter(self):
         """Run a candidate filter and report what it matches, without saving.

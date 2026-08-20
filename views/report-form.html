@@ -473,16 +473,25 @@
 
   form.addEventListener("submit", async event => {
     event.preventDefault();
-    const target = currentSlug();
-    const response = await fetch(`/api/definitions/${encodeURIComponent(target)}`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(readForm())
-    });
+    // Creating and updating are different requests, because the server cannot
+    // tell them apart from the URL alone -- and when it guessed, a new report
+    // whose title collided with an existing one replaced it silently.
+    const response = isNew
+      ? await fetch("/api/definitions", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(readForm())
+        })
+      : await fetch(`/api/definitions/${encodeURIComponent(slug)}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(readForm())
+        });
     const payload = await response.json();
     if (response.ok) {
       show($("save-result"), "ok",
         `Saved. <a href="/">Back to reports</a> and refresh it to pull data.`);
-      if (isNew) location.search = `?slug=${encodeURIComponent(target)}`;
+      // The server owns the slug, so follow the one it reports rather than the
+      // one this page derived.
+      if (isNew) location.search = `?slug=${encodeURIComponent(payload.slug)}`;
     } else {
       const problems = payload.problems || [payload.message || "Could not save."];
       show($("save-result"), "err", "Not saved:<ul>"

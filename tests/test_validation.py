@@ -104,6 +104,32 @@ class Reports(unittest.TestCase):
         self.assertTrue(any("already exists" in p for p in problems))
         self.assertEqual(validate_report("baseline", report(), is_new=False), [])
 
+    def test_updating_a_report_that_does_not_exist_is_rejected(self):
+        # The mirror of the check above: an edit posted from a page whose report
+        # has since been deleted should fail rather than quietly recreate it.
+        problems = validate_report("long-gone", report(), is_new=False)
+        self.assertTrue(any("no report called" in p for p in problems), problems)
+
+    def test_the_duplicate_check_is_reachable_from_save_report(self):
+        """#32: the guard existed but nothing could ever reach it.
+
+        `save_report` derived `is_new` as `slug not in existing_slugs()`, and
+        the guard reads `is_new and slug in existing_slugs()` -- the two halves
+        cannot both hold, so the branch was dead and a colliding new report
+        overwrote the old one. Intent is now passed in, so this asserts the
+        caller cannot go back to inferring it.
+        """
+        import inspect
+
+        from report_store import save_report
+        signature = inspect.signature(save_report)
+        self.assertIn("is_new", signature.parameters,
+                      "save_report must take the author's intent, not infer it")
+        self.assertIs(signature.parameters["is_new"].default,
+                      inspect.Parameter.empty,
+                      "is_new must be required; a default would let a caller "
+                      "fall back to the guess that caused #32")
+
     def test_title_and_status_are_required(self):
         problems = validate_report(
             "r", report(copy={"title": "  "}, measure_status=""), is_new=True)

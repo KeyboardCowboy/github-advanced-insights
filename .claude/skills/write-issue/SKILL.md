@@ -25,11 +25,18 @@ verbatim.** Do not work from memory or from a copy embedded anywhere else. These
 templates get edited, and an issue written against a stale idea of them creates
 exactly the inconsistency they exist to prevent.
 
-The `###` headings in the template are the sections your body needs. Where a
-template offers a checkbox list, tick one from the list rather than writing your
-own wording — those vocabularies stay filterable only if everyone uses them.
+The headings in the template are the sections your body needs. Copy them at the
+level the template uses — that is not the same across all four, so read rather
+than assume. Where a template offers a checkbox list, tick one from the list
+rather than writing your own wording; those vocabularies stay scannable only if
+everyone uses them.
 
-If genuinely important material has no home in the template, add a `### Notes`
+Some fields exist for the person triaging rather than the person reporting. The
+bug template's "Where it happens" is one: a user often cannot know which stage
+broke, but you can, because you read the code before writing the issue. Fill in
+what you actually determined and leave the rest.
+
+If genuinely important material has no home in the template, add a `Notes`
 section at the end rather than distorting a field to hold it.
 
 ## Verify before you write

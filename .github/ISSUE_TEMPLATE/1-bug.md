@@ -1,4 +1,5 @@
 ---
+<<<<<<< HEAD
 name: Bug
 about: Something is not working as designed
 labels: '#Bug'
@@ -47,3 +48,23 @@ that separates an urgent bug from an annoying one, so please pick honestly.
 ### Commit or version
 
 <!-- git rev-parse --short HEAD -->
+=======
+name: 🐞 Bug
+description: Something is not working as designed
+labels: []
+---
+
+## Brief Description
+
+## Steps to Reproduce
+1. 
+
+## Expected Results
+
+## Actual Results
+
+## References/Screenshots
+
+## Accptance Criteria
+<!-- Complete the sentence "When this issue is complete, ..." -->
+>>>>>>> 03d4c4bb1f6f7d62014ecb55a90feb9e1a558877

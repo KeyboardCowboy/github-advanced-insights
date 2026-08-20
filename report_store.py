@@ -60,6 +60,10 @@ def validate_report(slug, values, is_new):
         )
     elif is_new and slug in existing_slugs():
         problems.append(f"A report called '{slug}' already exists.")
+    elif not is_new and slug not in existing_slugs():
+        # The mirror of the check above. Without it, an edit of a report that
+        # has since been deleted quietly recreates it from a stale page.
+        problems.append(f"There is no report called '{slug}' to update.")
 
     copy = values.get("copy") or {}
     if not str(copy.get("title", "")).strip():
@@ -97,9 +101,16 @@ def validate_report(slug, values, is_new):
     return problems
 
 
-def save_report(slug, values):
-    """Create or update one definition. Returns what was written."""
-    is_new = slug not in existing_slugs()
+def save_report(slug, values, is_new):
+    """Create or update one definition. Returns what was written.
+
+    `is_new` is the author's intent, and callers have to state it. It used to be
+    inferred here as `slug not in existing_slugs()`, which made the duplicate
+    check in `validate_report` unreachable: that check reads `is_new and slug in
+    existing_slugs()`, and the two halves cannot both hold. A brand new report
+    whose title happened to slug to an existing filename was therefore treated
+    as an edit of it and replaced it without warning (#32).
+    """
     problems = validate_report(slug, values, is_new)
     if problems:
         raise ValueError("\n".join(problems))

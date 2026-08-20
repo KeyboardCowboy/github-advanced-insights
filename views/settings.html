@@ -540,8 +540,14 @@
 
     form.querySelector(".test").addEventListener("click", async () => {
       showResult(form, "", "Checking...");
-      const response = await fetch(
-        `/api/accounts/${encodeURIComponent(form.elements.id.value)}/test`, { method: "POST" });
+      // Send what is on screen, not what is saved, so a new account can be
+      // checked before it is committed.
+      const values = {};
+      for (const name of ACCOUNT_FIELDS) values[name] = form.elements[name].value.trim();
+      const response = await fetch("/api/accounts/test", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
       const payload = await response.json();
       // Naming the resolved login matters: a misconfigured account silently
       // falls back to the active gh login, which otherwise looks like success.

@@ -58,7 +58,13 @@ def resolve_token(account=None):
     Raises RuntimeError with a message naming the fix, since every caller is
     either a CLI run or an HTTP handler that must turn it into a response.
     """
-    key = (account or {}).get("id", "__active__")
+    # Keyed on where the token comes from rather than on the account id, so
+    # editing an account's source and testing again cannot return the token
+    # resolved for its previous source.
+    key = (
+        (account or {}).get("token_env") or "",
+        (account or {}).get("gh_account") or "",
+    )
     if key in _TOKEN_CACHE:
         return _TOKEN_CACHE[key]
 
@@ -66,9 +72,12 @@ def resolve_token(account=None):
     if env_name:
         token = os.environ.get(env_name, "").strip()
         if not token:
+            named = f"Account '{account['id']}'" if account.get("id") else "This account"
+            # The variable has to be set in the *server's* environment, not the
+            # shell the user is typing in, which is the usual reason this fails.
             raise RuntimeError(
-                f"Account '{account['id']}' reads its token from ${env_name}, "
-                f"which is not set."
+                f"{named} reads its token from ${env_name}, which is not set in "
+                f"this process. Set it before starting the server."
             )
     else:
         login = (account or {}).get("gh_account")
@@ -154,7 +163,6 @@ def save_account(values):
         document["default_account"] = saved["id"]
 
     _write(document)
-    _TOKEN_CACHE.pop(saved["id"], None)
     return saved
 
 

@@ -35,6 +35,7 @@ from urllib.parse import parse_qs, urlparse
 import workspace
 from accounts import (
     delete_account,
+    validate_account,
     describe_source,
     get_account,
     list_accounts,
@@ -330,9 +331,8 @@ class Handler(BaseHTTPRequestHandler):
         return self.send_json({"deleted": match.group(1)})
 
     def do_POST(self):
-        match = re.fullmatch(r"/api/accounts/([^/]+)/test", self.path)
-        if match:
-            return self.test_account(match.group(1))
+        if self.path == "/api/accounts/test":
+            return self.test_account()
 
         if self.path == "/api/projects/test":
             return self.test_project()
@@ -478,15 +478,26 @@ class Handler(BaseHTTPRequestHandler):
             "samples": samples,
         })
 
-    def test_account(self, account_id):
-        """Resolve an account's token and report which login it belongs to.
+    def test_account(self):
+        """Resolve a candidate account's token and report which login it is.
 
-        Naming the login matters: a misconfigured account falls back to the
-        active `gh` login and would otherwise look like success.
+        Takes the values from the request body rather than looking up a saved
+        account, so an account can be checked *before* it is committed -- which
+        is when a typo is cheapest to fix, and the only time the button was
+        previously useless.
+
+        Naming the resolved login matters either way: an account with no source
+        falls back to the active `gh` login, which would otherwise be
+        indistinguishable from success.
         """
-        account = get_account(account_id)
+        account = self.read_json_body()
         if account is None:
-            return self.send_json({"error": "not_found"}, status=404)
+            return
+
+        problems = validate_account(account, is_new=False)
+        if problems:
+            return self.send_json({"error": "invalid", "message": " ".join(problems)}, 400)
+
         try:
             resolve_token(account)
         except RuntimeError as exc:

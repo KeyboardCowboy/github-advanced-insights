@@ -72,16 +72,18 @@ class NewReport(BrowserTest):
         self.assertNotIn("filter", stored)
 
     def test_the_new_report_appears_in_the_sidebar(self):
-        self.page.fill("#title", "Waiting on Review")
+        # Its own title: the class shares one workspace, and reusing the title
+        # another test already saved is now correctly refused as a duplicate.
+        self.page.fill("#title", "Sidebar Check")
         self.page.select_option("#measure_status", "Ready for QA")
         self.page.fill("#bin_days", "1")
         self.page.fill("#threshold_days", "5")
         self.page.fill("#order", "50")
-        self.save_expecting_success("waiting-on-review")
+        self.save_expecting_success("sidebar-check")
 
         self.goto("/")
         expect(self.page.locator(
-            '.report-link[data-slug="waiting-on-review"]')).to_have_count(1)
+            '.report-link[data-slug="sidebar-check"]')).to_have_count(1)
 
     def test_the_browser_refuses_an_out_of_range_scale_before_the_server_sees_it(self):
         """The numeric inputs carry min= constraints, so this never submits.
@@ -100,25 +102,14 @@ class NewReport(BrowserTest):
         self.assertFalse((self.workspace / "definitions" / "broken-report.json").exists(),
                          "a refused report must not be written")
 
-    @unittest.expectedFailure
     def test_a_duplicate_title_is_refused_by_the_server(self):
         """A slug collision can only be judged against what is on disk.
 
         The browser cannot know "Baseline" is taken, so the server's answer is
         the only thing standing between a new report and silently overwriting an
-        existing one.
-
-        **Currently it does not stand there.** `save_report` derives `is_new`
-        from whether the slug already exists on disk, so a genuinely new report
-        that collides is treated as an edit of the one it collided with:
-        `validate_report`'s duplicate check never runs, and the original is
-        replaced with no warning. Verified directly against `report_store` --
-        a report measuring "In Progress" came back measuring "Ready for QA".
-
-        Filed as #32. Marked expected-failure rather than deleted so the suite
-        stays green while still carrying the case. Fixing the bug makes this an
-        unexpected success, which fails the run and asks for the decorator to
-        come off.
+        existing one. It used not to stand there: `save_report` inferred
+        `is_new` from whether the file existed, which made the duplicate check
+        unreachable and let the new report replace the old one (#32).
         """
         self.page.fill("#title", "Baseline")
         self.page.select_option("#measure_status", "Ready for QA")

@@ -214,43 +214,102 @@ def run_graphql(query, account=None):
         sys.exit(str(exc))
 
 
-def fetch_report(slug):
-    """Pull the filtered item set, plus each matched issue's status timeline."""
-    definition = load_definition(slug)
+ITEMS_PAGE_SIZE = 100
 
+# A board matching this many items is a filter that needs narrowing, not a
+# board that needs fetching. The cap exists so a mistake costs 50 requests
+# rather than running until the rate limit stops it.
+MAX_ITEM_PAGES = 50
+
+
+def fetch_board_items(definition, project, account, scope):
+    """Every item matching the filter, following pageInfo until exhausted.
+
+    Returns (board, issues, matched, seen). `matched` is what GitHub says the
+    filter hit; `seen` is how many items we actually walked. They differ only
+    when the cap below stops the loop early.
+
+    One page was the whole of #1: the query asked for `first: 100`, warned on
+    stderr when more matched, and then built the report from the partial set.
+    Every stat, bar and row agreed with each other, so nothing on the page
+    looked wrong -- the report was just about a hundred tickets instead of all
+    of them.
+    """
     # The filter's own quotes sit inside the outer GraphQL string literal, so
     # they must be escaped or that literal terminates early -- which surfaces as
     # a confusing parse error rather than an invalid-filter error.
     escaped = definition["filter"].replace('"', '\\"')
-    project = definition["_project"]
-    account = account_for(project)
-    scope = owner_scope(project)
-    data = run_graphql(f'''
-    {{
-      {scope}(login: "{project["owner"]}") {{
-        projectV2(number: {definition["project_number"]}) {{
-          number
-          title
-          items(first: 100, query: "{escaped}") {{
-            totalCount
-            nodes {{
-              content {{
-                ... on Issue {{ id number title url repository {{ nameWithOwner }} }}
+
+    board, issues, seen, matched, cursor, pages = None, [], 0, None, None, 0
+
+    while True:
+        after = f', after: "{cursor}"' if cursor else ""
+        data = run_graphql(f'''
+        {{
+          {scope}(login: "{project["owner"]}") {{
+            projectV2(number: {definition["project_number"]}) {{
+              number
+              title
+              items(first: {ITEMS_PAGE_SIZE}, query: "{escaped}"{after}) {{
+                totalCount
+                pageInfo {{ hasNextPage endCursor }}
+                nodes {{
+                  content {{
+                    ... on Issue {{ id number title url repository {{ nameWithOwner }} }}
+                  }}
+                }}
               }}
             }}
           }}
-        }}
-      }}
-    }}''', account)
+        }}''', account)
 
-    board = data[scope]["projectV2"]
-    items = board["items"]
-    issues = [n["content"] for n in items["nodes"] if n.get("content")]
+        board = data[scope]["projectV2"]
+        items = board["items"]
+        nodes = items["nodes"]
+        seen += len(nodes)
+        if matched is None:
+            matched = items["totalCount"]
 
-    if items["totalCount"] > len(issues):
+        # `content` is null for anything that is not an Issue -- draft items and
+        # pull requests both sit on boards. They are skipped, which is why the
+        # completeness check below counts items seen rather than issues kept:
+        # comparing totalCount to the issue count would report a board with a
+        # single draft on it as truncated, every time.
+        issues.extend(node["content"] for node in nodes if node.get("content"))
+
+        page = items["pageInfo"]
+        pages += 1
+        if not page["hasNextPage"]:
+            break
+        if pages >= MAX_ITEM_PAGES:
+            print(
+                f"! Stopped after {pages} pages ({seen} items). The filter matches "
+                f"{matched}; narrow it or raise MAX_ITEM_PAGES.",
+                file=sys.stderr,
+            )
+            break
+        cursor = page["endCursor"]
+
+    return board, issues, matched, seen
+
+
+def fetch_report(slug):
+    """Pull the filtered item set, plus each matched issue's status timeline."""
+    definition = load_definition(slug)
+
+    project = definition["_project"]
+    account = account_for(project)
+    scope = owner_scope(project)
+    board, issues, matched, seen = fetch_board_items(
+        definition, project, account, scope)
+
+    if matched is not None and seen < matched:
+        # Should now only happen when the page cap stopped the loop, which says
+        # so above. Kept as a backstop: a partial set that nothing announces is
+        # the failure this whole change exists to remove.
         print(
-            f"! Filter matched {items['totalCount']} items but only {len(issues)} were "
-            "fetched. The 100-item page was exceeded.",
+            f"! Filter matched {matched} items but only {seen} were fetched. "
+            "This report is incomplete.",
             file=sys.stderr,
         )
 

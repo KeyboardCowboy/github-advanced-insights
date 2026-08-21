@@ -169,6 +169,21 @@ The stub raises on a query it does not recognise rather than returning an empty
 result, so teaching it about a new call is a clear error rather than a confusing
 assertion failure three layers away.
 
+### The stub is a contract, not a convenience
+
+`fake_github.py` has to answer with the same *shape* the real API does, not just
+enough to get past the next line. Two bugs came from it not doing so:
+
+- Its items response had no `pageInfo`, so browser tests never walked the
+  pagination loop from #1 — they took a path the tool never takes in life.
+- It answered the dashboard's board query without `number`, `title` or node
+  `id`s, which the report form's filter preview happens not to need. The
+  dashboard did, and failed inside the server rather than in the stub.
+
+Both surfaced as errors three layers from the cause. When a new caller reuses a
+query shape, check the stub answers everything *that* caller reads, not only
+what the first one did.
+
 ### Waiting
 
 Prefer `expect(locator)` over reading state straight after an action. Two traps

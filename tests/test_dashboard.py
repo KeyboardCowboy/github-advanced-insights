@@ -87,6 +87,83 @@ class CurrentStatus(unittest.TestCase):
         self.assertIsNone(entered)
 
 
+class Definitions(unittest.TestCase):
+    """A board's dashboard settings: the filter, stored and editable."""
+
+    def workspace(self):
+        temp = tempfile.mkdtemp(prefix="gh-insights-dashdef-")
+        self.addCleanup(shutil.rmtree, temp, ignore_errors=True)
+        path = Path(temp) / "workspace"
+        shutil.copytree(FIXTURE_WORKSPACE, path)
+        return path
+
+    def run_in(self, workspace, code):
+        return subprocess.run(
+            [sys.executable, "-c", code], cwd=REPO_ROOT,
+            capture_output=True, text=True,
+            env={"GH_INSIGHTS_HOME": str(workspace), "PATH": ""})
+
+    def test_a_board_with_no_file_gets_the_default_filter(self):
+        # Never configured is not an error; it just has not been changed yet.
+        workspace = self.workspace()
+        result = self.run_in(workspace, """
+import dashboard
+print(dashboard.load_definition("acme-board")["filter"])
+""")
+        self.assertEqual(result.stdout.strip(), dashboard.DEFAULT_FILTER)
+
+    def test_saving_then_loading_returns_what_was_saved(self):
+        workspace = self.workspace()
+        result = self.run_in(workspace, """
+import dashboard
+dashboard.save_definition("acme-board", {"filter": 'is:open status:"In Progress"'})
+print(dashboard.load_definition("acme-board")["filter"])
+""")
+        self.assertEqual(result.stdout.strip(), 'is:open status:"In Progress"')
+        self.assertTrue((workspace / "dashboards" / "acme-board.json").exists())
+
+    def test_each_board_keeps_its_own(self):
+        # Two boards on one installation have different columns, so one filter
+        # for both would be wrong for at least one of them.
+        workspace = self.workspace()
+        result = self.run_in(workspace, """
+import dashboard
+dashboard.save_definition("board-a", {"filter": "is:open"})
+dashboard.save_definition("board-b", {"filter": "is:closed"})
+print(dashboard.load_definition("board-a")["filter"])
+print(dashboard.load_definition("board-b")["filter"])
+""")
+        self.assertEqual(result.stdout.split(), ["is:open", "is:closed"])
+
+    def test_an_empty_filter_is_refused(self):
+        problems = dashboard.validate_definition({"filter": "   "})
+        self.assertTrue(any("required" in p for p in problems), problems)
+
+    def test_a_multi_line_filter_is_refused(self):
+        problems = dashboard.validate_definition({"filter": "is:open\nis:closed"})
+        self.assertTrue(any("single line" in p for p in problems), problems)
+
+    def test_an_absurdly_long_filter_is_refused(self):
+        problems = dashboard.validate_definition({"filter": "x" * 900})
+        self.assertTrue(any("limit" in p for p in problems), problems)
+
+    def test_a_normal_filter_passes(self):
+        self.assertEqual(
+            dashboard.validate_definition({"filter": 'is:open -type:Epic'}), [])
+
+    def test_a_refused_filter_is_not_written(self):
+        workspace = self.workspace()
+        self.run_in(workspace, """
+import dashboard
+try:
+    dashboard.save_definition("acme-board", {"filter": ""})
+except ValueError:
+    pass
+""")
+        self.assertFalse((workspace / "dashboards" / "acme-board.json").exists(),
+                         "an invalid filter must not reach disk")
+
+
 class NormalizeAgainstTheGolden(unittest.TestCase):
     """Runs in a subprocess: workspace paths bind at import, and this writes."""
 

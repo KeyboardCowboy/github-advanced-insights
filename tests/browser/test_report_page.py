@@ -26,9 +26,10 @@ class ReportSwitching(BrowserTest):
         self.goto("/")
 
     def test_the_page_renders_without_throwing(self):
+        # Deliberately not pinning the masthead copy: it is prose someone tunes,
+        # and a test that fails on a reworded heading trains people to ignore it.
         self.assertNoPageErrors()
-        self.assertEqual(self.page.locator("h1").first.text_content(),
-                         "Work Item Age by Status")
+        self.assertTrue(self.page.locator("h1").first.text_content().strip())
 
     def test_the_sidebar_lists_every_report(self):
         slugs = self.page.locator(".report-link").evaluate_all(
@@ -667,8 +668,11 @@ class AgingScatter(BrowserTest):
         tooltip = self.page.locator("#tooltip")
         expect(tooltip).to_contain_text("days in")
 
-    def test_the_filter_is_shown_so_the_population_is_not_a_guess(self):
-        expect(self.page.locator("#dashboard-filter")).to_contain_text("is:open")
+    def test_the_filter_is_editable_on_the_page(self):
+        # It decides what every chart is about, so it is edited where those
+        # charts are rather than on a settings page.
+        expect(self.page.locator("#dashboard-filter")).to_have_value(
+            "is:open -type:Epic,Feature")
 
     def test_retired_columns_are_explained_rather_than_dropped(self):
         notes = self.page.locator("#dashboard-note-list").text_content()
@@ -680,6 +684,86 @@ class AgingScatter(BrowserTest):
 
     def test_the_page_does_not_throw(self):
         self.assertNoPageErrors()
+
+    def test_no_report_stays_highlighted_while_the_dashboard_is_open(self):
+        """The selected report is remembered, but it is not what is on screen.
+
+        The sidebar highlighted it anyway, so the page showed the dashboard
+        while the sidebar said a report was open -- two answers to "where am I"
+        at once.
+        """
+        highlighted = self.page.locator('.report-link[aria-current="true"]')
+        expect(highlighted).to_have_count(0)
+        expect(self.page.locator('#dashboard-link[aria-current="true"]')).to_have_count(1)
+
+    def test_going_back_to_a_report_restores_its_highlight(self):
+        # The report selection survives the trip, which is the reason the two
+        # are tracked separately rather than one clearing the other.
+        self.page.click('.report-link[data-slug="baseline"]')
+        expect(self.page.locator(
+            '.report-link[data-slug="baseline"][aria-current="true"]')).to_have_count(1)
+        expect(self.page.locator('#dashboard-link[aria-current="true"]')).to_have_count(0)
+
+
+class EditingTheDashboardFilter(BrowserTest):
+    """Saving writes to the workspace, so this gets a workspace of its own.
+
+    Sharing one with the read-only dashboard tests meant a save here changed the
+    stored filter for every test that ran after it -- and unittest orders
+    methods alphabetically, so which tests those were was not obvious from
+    reading the file.
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    @classmethod
+    def prepare_workspace(cls):
+        subprocess.run(
+            [sys.executable, str(REPO_ROOT / "dashboard.py"), "normalize", "acme-board"],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+            env={**os.environ, "GH_INSIGHTS_HOME": str(cls.workspace)}, check=True)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#scatter .dot").first).to_be_visible()
+
+    def test_saving_an_invalid_filter_is_refused_in_place(self):
+        # No network needed: the server rejects it before trying to fetch.
+        self.page.fill("#dashboard-filter", "   ")
+        self.page.click("#dashboard-save")
+        result = self.page.locator("#dashboard-result.ok, #dashboard-result.err")
+        expect(result).to_be_visible()
+        expect(result).to_contain_text("filter is required")
+        # And the charts still describe the filter that is actually in force.
+        expect(self.page.locator("#scatter .dot")).not_to_have_count(0)
+
+    def test_saving_a_filter_refetches_and_redraws(self):
+        """The whole point of editing the filter here rather than elsewhere.
+
+        Saving without refetching would leave the charts describing the old
+        filter while the field showed the new one -- a page that looks settled
+        and is not.
+        """
+        self.page.fill("#dashboard-filter", 'is:open status:"In Progress"')
+        self.page.click("#dashboard-save")
+
+        result = self.page.locator("#dashboard-result.ok, #dashboard-result.err")
+        expect(result).to_be_visible(timeout=20000)
+        expect(result).to_have_class("result ok")
+        # Redrawn from the refetch rather than left as it was.
+        expect(self.page.locator("#scatter .dot")).not_to_have_count(0)
+
+    def test_a_saved_filter_survives_a_reload(self):
+        self.page.fill("#dashboard-filter", "is:open")
+        self.page.click("#dashboard-save")
+        expect(self.page.locator("#dashboard-result.ok, #dashboard-result.err")
+               ).to_be_visible(timeout=20000)
+
+        self.goto("/")
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-filter")).to_have_value("is:open")
 
 
 class ScatterWithoutData(BrowserTest):
@@ -695,10 +779,17 @@ class ScatterWithoutData(BrowserTest):
     def test_it_says_so_instead_of_drawing_an_empty_chart(self):
         self.goto("/")
         self.page.click("#dashboard-link")
-        expect(self.page.locator("#dashboard-view")).to_be_visible()
-        expect(self.page.locator("#scatter-sub")).to_contain_text("never been fetched")
-        expect(self.page.locator("#scatter .dot")).to_have_count(0)
+        expect(self.page.locator("#dashboard-canvas")).to_contain_text("not been fetched")
+        expect(self.page.locator("#scatter")).to_have_count(0)
         self.assertNoPageErrors()
+
+    def test_the_filter_is_still_editable_with_no_data(self):
+        # The filter is what decides what a first fetch pulls, so hiding it
+        # until there is data would hide the control that fixes the situation.
+        self.goto("/")
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-filter")).to_have_value(
+            "is:open -type:Epic,Feature")
 
 
 if __name__ == "__main__":

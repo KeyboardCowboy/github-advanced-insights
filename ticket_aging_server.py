@@ -9,7 +9,8 @@ anything, but a page served from here can.
   GET  /                            the interface (read live from views/)
   GET  /api/reports                 every definition + its cache freshness
   GET  /api/reports/<slug>          one cached view model
-  GET  /api/dashboard/<project>    the board-level view model
+  GET  /api/dashboard/<project>    dashboard settings, plus data if fetched
+  PUT  /api/dashboard/<project>    save the filter, then refetch under it
   POST /api/dashboard/<project>/refresh  rebuild it from GitHub
   POST /api/definitions            create a report, refusing a taken slug
   PUT  /api/reports/order          renumber every report in the order given
@@ -33,6 +34,7 @@ import os
 import re
 import sys
 import threading
+import traceback
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -125,6 +127,35 @@ def report_summary(slug):
     return summary
 
 
+def json_errors(method):
+    """Make an unhandled exception in an API route answer with JSON.
+
+    The page parses every API response as JSON, so an escaping exception --
+    which BaseHTTPRequestHandler renders as an HTML error page, or which kills
+    the connection outright -- reaches the reader as
+    `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`. That names the
+    parser, not the fault, and sends whoever is debugging it looking in the
+    browser instead of at the server.
+
+    This is a backstop, not a substitute for handling the failures a route can
+    actually predict; those still produce their own specific messages and
+    status codes. Page routes are left alone, since an HTML error page is the
+    right answer to a request for a page.
+    """
+    def wrapper(self):
+        try:
+            return method(self)
+        except Exception as exc:              # noqa: BLE001 - deliberate backstop
+            if not self.path.startswith("/api/"):
+                raise
+            traceback.print_exc()
+            self.send_json({
+                "error": "server_error",
+                "message": f"{type(exc).__name__}: {exc}",
+            }, status=500)
+    return wrapper
+
+
 class Handler(BaseHTTPRequestHandler):
     # Quieter logs: one line per request, without the default's noise.
     def log_message(self, fmt, *args):
@@ -170,6 +201,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- routes ------------------------------------------------------------
 
+    @json_errors
     def do_GET(self):
         if self.path in ("/", "/index.html"):
             # Read the template per request so edits show on a plain reload.
@@ -230,14 +262,7 @@ class Handler(BaseHTTPRequestHandler):
             project = get_project(match.group(1))
             if project is None:
                 return self.send_json({"error": "not_found"}, status=404)
-            model_path = dashboard.cache_paths(project["id"])["model"]
-            if not model_path.exists():
-                return self.send_json(
-                    {"error": "not_cached", "project": project["id"],
-                     "message": "This board has never been fetched for the "
-                                "dashboard. Use Refresh."},
-                    status=404)
-            return self.send_json(json.loads(model_path.read_text()))
+            return self.send_json(self.dashboard_payload(project))
 
         if self.path == "/api/reports":
             return self.send_json({"reports": [report_summary(s) for s in available_slugs()]})
@@ -258,6 +283,7 @@ class Handler(BaseHTTPRequestHandler):
 
         self.send_json({"error": "not_found"}, status=404)
 
+    @json_errors
     def do_PUT(self):
         match = re.fullmatch(r"/api/accounts/([^/]+)", self.path)
         if match:
@@ -271,6 +297,25 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(
                     {"error": "invalid", "problems": str(exc).splitlines()}, status=400
                 )
+
+        match = re.fullmatch(r"/api/dashboard/([^/]+)", self.path)
+        if match:
+            project = get_project(match.group(1))
+            if project is None:
+                return self.send_json({"error": "not_found"}, status=404)
+            values = self.read_json_body()
+            if values is None:
+                return
+            try:
+                dashboard.save_definition(project["id"], values)
+            except ValueError as exc:
+                return self.send_json(
+                    {"error": "invalid", "problems": str(exc).splitlines()},
+                    status=400)
+            # Saving a filter that nothing has been fetched under would leave
+            # the charts describing the previous one, which is the sort of
+            # wrong that looks right. So a save is also a refetch.
+            return self.rebuild_dashboard(project)
 
         if self.path == "/api/reports/order":
             values = self.read_json_body()
@@ -337,6 +382,20 @@ class Handler(BaseHTTPRequestHandler):
                 {"error": "invalid", "problems": str(exc).splitlines()}, status=400
             )
 
+    def rebuild_dashboard(self, project):
+        """Refetch a board and answer with the same shape as GET."""
+        try:
+            dashboard.refresh(project["id"])
+        except GitHubError as exc:
+            return self.send_json(
+                {"error": "unreachable", "message": str(exc)}, status=502)
+        except (RuntimeError, SystemExit) as exc:
+            # The pipeline exits on bad configuration and raises on a missing
+            # credential source; a server has to keep answering either way.
+            return self.send_json({"error": "invalid", "message": str(exc)}, status=400)
+        return self.send_json(self.dashboard_payload(project))
+
+    @json_errors
     def do_DELETE(self):
         match = re.fullmatch(r"/api/accounts/([^/]+)", self.path)
         if match:
@@ -364,6 +423,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "in_use", "message": str(exc)}, status=409)
         return self.send_json({"deleted": match.group(1)})
 
+    @json_errors
     def do_POST(self):
         if self.path == "/api/definitions":
             return self.create_report()
@@ -394,15 +454,7 @@ class Handler(BaseHTTPRequestHandler):
             project = get_project(match.group(1))
             if project is None:
                 return self.send_json({"error": "not_found"}, status=404)
-            try:
-                return self.send_json(dashboard.refresh(project["id"]))
-            except GitHubError as exc:
-                return self.send_json(
-                    {"error": "unreachable", "message": str(exc)}, status=502)
-            except SystemExit as exc:
-                # The pipeline exits on bad configuration; a server must not.
-                return self.send_json(
-                    {"error": "invalid", "message": str(exc)}, status=400)
+            return self.rebuild_dashboard(project)
 
         match = re.fullmatch(r"/api/reports/([^/]+)/refresh", self.path)
         if not match:
@@ -501,6 +553,23 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(
                 {"error": "invalid", "problems": str(exc).splitlines()}, status=400)
         return self.send_json({"slug": slug, "stored": stored}, status=201)
+
+    def dashboard_payload(self, project):
+        """A board's dashboard settings, plus its data if it has any.
+
+        Always answers, rather than 404ing when nothing has been fetched. The
+        filter is editable before the first fetch -- it is what decides what
+        that fetch pulls -- so a response that omitted it whenever there was no
+        data would hide the one control that fixes the situation.
+        """
+        model_path = dashboard.cache_paths(project["id"])["model"]
+        return {
+            "project": project["id"],
+            "project_label": project["label"],
+            "definition": dashboard.load_definition(project["id"]),
+            "model": (json.loads(model_path.read_text())
+                      if model_path.exists() else None),
+        }
 
     def preview_filter(self):
         """Run a candidate filter and report what it matches, without saving.

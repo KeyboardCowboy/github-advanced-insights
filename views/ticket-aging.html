@@ -289,6 +289,21 @@
     letter-spacing: .1em; text-transform: uppercase; fill: var(--ink-3);
   }
   .threshold { stroke: var(--accent-rule); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dashboard-filter label {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 8px;
+  }
+  .filter-row { display: flex; gap: 8px; align-items: stretch; }
+  .filter-row input {
+    flex: 1; min-width: 0; font: inherit; font-family: var(--font-mono);
+    font-size: 13px; color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px;
+  }
+  .filter-row input:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .dashboard-filter .hint {
+    display: block; margin-top: 8px; font-size: 12px; color: var(--ink-3);
+  }
+  #dashboard-canvas { display: flex; flex-direction: column; gap: var(--view-gap); }
   .dot { fill: var(--series); fill-opacity: .78; stroke: var(--bg); stroke-width: 1; }
   .dot:hover { fill-opacity: 1; }
   /* Percentile lines sit behind the dots and read as reference, not as data. */
@@ -385,11 +400,9 @@
 </style>
 
 <header class="masthead">
-  <h1 class="wordmark">Work Item Age by Status</h1>
+  <h1 class="wordmark">Issue Age by Status</h1>
   <p class="metric-def">
-    How long unfinished work has been sitting in its current column, measured right now.
-    <span class="contrast">Cycle time is only available after work is finished. This is the
-    leading indicator you can still act on.</span>
+    How long unfinished work has been sitting in its current status.
   </p>
 </header>
 
@@ -416,28 +429,26 @@
     </header>
 
     <p class="meta" id="dashboard-meta"></p>
-    <p class="meta" id="dashboard-controls">
-      <button type="button" class="refresh" id="dashboard-refresh">Refresh data</button>
-      <span class="refresh-note" id="dashboard-note"></span>
-    </p>
-    <p class="filter-line" id="dashboard-filter" hidden></p>
 
-    <section class="stats" id="dashboard-stats"></section>
-
-    <section class="card">
-      <div class="card-head">
-        <h3 class="section-title">Aging work in progress</h3>
-        <p class="card-sub" id="scatter-sub"></p>
+    <!-- The filter decides what every chart below is about, so it is edited
+         here rather than on a settings page: the thing it governs is on screen
+         while you change it. -->
+    <form class="card dashboard-filter" id="dashboard-filter-form">
+      <label for="dashboard-filter">Issues on this dashboard</label>
+      <div class="filter-row">
+        <input id="dashboard-filter" name="filter" autocomplete="off"
+               spellcheck="false" required>
+        <button type="submit" class="primary" id="dashboard-save">Save</button>
+        <button type="button" class="refresh" id="dashboard-refresh">Refresh</button>
       </div>
-      <div class="chart-scroll"><svg id="scatter" viewBox="0 0 900 420" role="img"
-        aria-label="Scatter of every open ticket, by the column it is in and how
-                    long it has been there"></svg></div>
-    </section>
+      <span class="hint">A GitHub project filter. Saving refetches the board and
+        redraws everything below.</span>
+      <div class="result" id="dashboard-result" hidden></div>
+    </form>
 
-    <section class="card notes" id="dashboard-notes">
-      <h3 class="section-title">Reading this correctly</h3>
-      <ul id="dashboard-note-list"></ul>
-    </section>
+    <!-- Charts render into here. Keeping them in one container means adding the
+         next chart is an append rather than another edit of this template. -->
+    <div id="dashboard-canvas"></div>
   </section>
 
   <div id="report-view">
@@ -750,6 +761,10 @@
   const VIEW_KEY = "ticket-aging:view";
   let summaries = [];
   let currentSlug = null;
+  // Which view is on screen. The selected report stays remembered while
+  // the dashboard is open -- going back should return to it -- so "which
+  // report" and "what is being shown" are two different questions.
+  let activeView = "report";
 
   // Compact freshness for the sidebar. The header carries the full timestamp;
   // here the useful question is only "how stale is this?".
@@ -887,7 +902,7 @@
     const link = report => `
       <button type="button" class="report-link" draggable="true"
               data-slug="${escapeHtml(report.slug)}"
-              aria-current="${report.slug === currentSlug}"
+              aria-current="${activeView === "report" && report.slug === currentSlug}"
               title="Drag to reorder, or Alt+Up / Alt+Down">
         <span class="name">${escapeHtml(report.title)}</span>
         <span class="sub">${report.count === null ? "not fetched"
@@ -1140,19 +1155,31 @@
     tooltip.style.top = Math.max(y - 12, 8) + "px";
   }
 
-  function renderDashboard(model) {
-    $("dashboard-meta").innerHTML =
-      `BOARD ${model.board.number} &middot; ${escapeHtml(model.board.title)}`
-      + ` / LAST UPDATED ${escapeHtml(model.updated_display)}`;
-    $("dashboard-filter").hidden = false;
-    $("dashboard-filter").innerHTML =
-      `<span class="key">Filter</span><span class="query">`
-      + `${escapeHtml(model.filter)}</span>`;
+  /** Draw the canvas: every chart the dashboard has, from one view model.
+   *
+   *  The canvas is rebuilt whole rather than patched, so adding the next chart
+   *  is an append here and nothing else. Charts live in one container so the
+   *  page above them stays a template.
+   */
+  function renderCanvas(model) {
+    const canvas = $("dashboard-canvas");
+    canvas.textContent = "";
+    if (!model) {
+      canvas.innerHTML =
+        `<section class="card notes"><h3 class="section-title">No data yet</h3>`
+        + `<p>This board has not been fetched. Save the filter above, or press `
+        + `Refresh, to pull it.</p></section>`;
+      return;
+    }
 
     const oldest = model.columns.flatMap(c => c.tickets)
       .sort((a, b) => b.days - a.days)[0];
     const band = label => (model.bands.find(b => b.label === label) || {}).days;
-    $("dashboard-stats").innerHTML = [
+
+    const stats = document.createElement("section");
+    stats.className = "stats";
+    stats.id = "dashboard-stats";
+    stats.innerHTML = [
       ["Tickets", String(model.total), "", "open across every column"],
       ["Median age", (band("p50") ?? 0).toFixed(1), "d", "half are younger"],
       ["85th percentile", (band("p85") ?? 0).toFixed(1), "d", "the usual worst case"],
@@ -1164,11 +1191,21 @@
         <p class="stat-value">${escapeHtml(value)}<span class="unit">${unit}</span></p>
         <p class="stat-note">${escapeHtml(note)}</p>
       </div>`).join("");
+    canvas.appendChild(stats);
 
-    $("scatter-sub").textContent =
-      `Every open ticket on the board, placed in the column it is in now and `
-      + `aged from the moment it got there. Dashed lines are percentiles across `
-      + `the whole board, not per column.`;
+    const chart = document.createElement("section");
+    chart.className = "card";
+    chart.innerHTML = `
+      <div class="card-head">
+        <h3 class="section-title">Aging work in progress</h3>
+        <p class="card-sub">Every ticket the filter matches, placed in the column
+          it is in now and aged from the moment it got there. Dashed lines are
+          percentiles across the whole board, not per column.</p>
+      </div>
+      <div class="chart-scroll"><svg id="scatter" viewBox="0 0 900 420" role="img"
+        aria-label="Scatter of every ticket, by the column it is in and how long
+                    it has been there"></svg></div>`;
+    canvas.appendChild(chart);
     drawScatter(model);
 
     const notes = [];
@@ -1185,11 +1222,38 @@
         + `drawn at zero, which would read as brand new work.`);
     }
     notes.push("Ages are wall-clock days, including weekends.");
-    $("dashboard-note-list").innerHTML =
-      notes.map(note => `<li>${note}</li>`).join("");
+
+    const notesCard = document.createElement("section");
+    notesCard.className = "card notes";
+    notesCard.id = "dashboard-notes";
+    notesCard.innerHTML = `<h3 class="section-title">Reading this correctly</h3>`
+      + `<ul id="dashboard-note-list">`
+      + notes.map(note => `<li>${note}</li>`).join("") + `</ul>`;
+    canvas.appendChild(notesCard);
+  }
+
+  /** Apply a whole dashboard payload: its settings and whatever data it has. */
+  function renderDashboard(payload) {
+    const model = payload.model;
+    $("dashboard-filter").value = payload.definition.filter;
+    $("dashboard-meta").innerHTML = model
+      ? `BOARD ${model.board.number} &middot; ${escapeHtml(model.board.title)}`
+        + ` / LAST UPDATED ${escapeHtml(model.updated_display)}`
+      : "NO BOARD DATA &middot; LAST UPDATED NEVER";
+    $("footer").textContent =
+      [payload.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
+    renderCanvas(model);
+  }
+
+  function showDashboardResult(kind, message) {
+    const box = $("dashboard-result");
+    box.className = `result ${kind}`;
+    box.innerHTML = message;
+    box.hidden = false;
   }
 
   async function selectDashboard() {
+    activeView = "dashboard";
     localStorage.setItem(VIEW_KEY, "dashboard");
     $("dashboard-view").hidden = false;
     $("report-view").hidden = true;
@@ -1208,6 +1272,7 @@
     // whatever the scope says, and there is no report to name.
     $("footer").textContent =
       [board && board.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
+    $("dashboard-result").hidden = true;
     await loadDashboard(board && board.project);
   }
 
@@ -1218,50 +1283,63 @@
    *  and points at the control that fixes it.
    */
   async function loadDashboard(projectId) {
-    if (!projectId) return dashboardEmpty("No board selected yet.");
-
+    if (!projectId) return renderCanvas(null);
     const response = await fetch(`/api/dashboard/${encodeURIComponent(projectId)}`);
-    if (response.ok) return renderDashboard(await response.json());
-
-    const detail = await response.json().catch(() => ({}));
-    dashboardEmpty(detail.message || "This board has no dashboard data yet.");
+    if (!response.ok) return renderCanvas(null);
+    renderDashboard(await response.json());
   }
 
-  function dashboardEmpty(message) {
-    $("dashboard-meta").textContent = "NO BOARD DATA";
-    $("dashboard-filter").hidden = true;
-    $("dashboard-stats").innerHTML = "";
-    $("scatter").textContent = "";
-    $("scatter-sub").textContent = message;
-    $("dashboard-note-list").innerHTML = "";
+  /** Save the filter, which is also what refetches under it.
+   *
+   *  Saving without refetching would leave the charts describing the previous
+   *  filter while the field showed the new one -- a page that looks settled and
+   *  is not, which is the failure this tool has to be most careful about.
+   */
+  async function saveDashboard(event) {
+    event.preventDefault();
+    await submitDashboard(`/api/dashboard/${encodeURIComponent(currentBoard())}`,
+                          "PUT", { filter: $("dashboard-filter").value },
+                          "Saved and refetched.");
   }
 
   async function refreshDashboard() {
-    const button = $("dashboard-refresh");
-    const note = $("dashboard-note");
-    const board = visibleSummaries()[0];
-    if (!board) return;
+    await submitDashboard(
+      `/api/dashboard/${encodeURIComponent(currentBoard())}/refresh`,
+      "POST", null, "Up to date.");
+  }
 
-    button.disabled = true;
-    note.textContent = " fetching from GitHub...";
-    note.classList.remove("error");
+  function currentBoard() {
+    const board = visibleSummaries()[0];
+    return board ? board.project : "";
+  }
+
+  async function submitDashboard(url, method, body, okMessage) {
+    const buttons = [$("dashboard-save"), $("dashboard-refresh")];
+    buttons.forEach(b => { b.disabled = true; });
+    showDashboardResult("", "Fetching from GitHub...");
     try {
-      const response = await fetch(
-        `/api/dashboard/${encodeURIComponent(board.project)}/refresh`,
-        { method: "POST" });
+      const response = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.message || "Refresh failed.");
+      if (!response.ok) {
+        const problems = payload.problems || [payload.message || "Could not save."];
+        return showDashboardResult("err",
+          `Not saved:<ul>${problems.map(p => `<li>${escapeHtml(p)}</li>`).join("")}</ul>`);
+      }
       renderDashboard(payload);
-      note.textContent = " up to date";
+      showDashboardResult("ok", escapeHtml(okMessage));
     } catch (error) {
-      note.textContent = " " + error.message;
-      note.classList.add("error");
+      showDashboardResult("err", escapeHtml(error.message));
     } finally {
-      button.disabled = false;
+      buttons.forEach(b => { b.disabled = false; });
     }
   }
 
   async function selectReport(slug) {
+    activeView = "report";
     $("dashboard-view").hidden = true;
     $("report-view").hidden = false;
     $("controls").hidden = false;
@@ -1333,6 +1411,7 @@
     $("sidebar").hidden = false;
     $("dashboard-link").addEventListener("click", selectDashboard);
     $("dashboard-refresh").addEventListener("click", refreshDashboard);
+    $("dashboard-filter-form").addEventListener("submit", saveDashboard);
     restoreScope();
 
     const remembered = localStorage.getItem(LAST_REPORT_KEY);

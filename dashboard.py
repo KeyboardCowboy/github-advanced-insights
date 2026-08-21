@@ -17,6 +17,7 @@ import cycle with the module that owns the report stages.
 """
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -25,15 +26,78 @@ from projects import account_for, get_project, list_projects, owner_scope
 from status_history import fetch_histories
 from ticket_aging import fetch_board_items, parse_ts, run_graphql
 
-# The same exclusions the reports use, so the scatter and the histograms
-# describe the same population. Epics and Features are containers rather than
-# work someone is moving, and their age says nothing about flow.
-DASHBOARD_FILTER = 'is:open -type:Epic,Feature'
+# Where a board's dashboard settings live. One file per board, next to the
+# report definitions, because a dashboard belongs to a board the same way a
+# report does.
+DASHBOARDS_DIRNAME = "dashboards"
+
+# The starting point for a board that has never been configured. The same
+# exclusions the reports use, so the scatter and the histograms describe the
+# same population: Epics and Features are containers rather than work someone
+# is moving, and their age says nothing about flow.
+DEFAULT_FILTER = 'is:open -type:Epic,Feature'
+
+# A filter is free text handed to GitHub, so there is little to check here
+# beyond "somebody typed something". What it actually matches is only knowable
+# by asking GitHub, which saving does immediately -- so a filter that is valid
+# but wrong is reported by the refresh rather than guessed at here.
+MAX_FILTER_LENGTH = 500
 
 # Drawn across the whole set rather than per column. A line per column would
 # need every column to hold enough tickets to have a distribution, which small
 # columns never do.
 PERCENTILES = (50, 85, 95)
+
+
+def dashboards_dir():
+    return workspace.WORKSPACE / DASHBOARDS_DIRNAME
+
+
+def definition_path(project_id):
+    return dashboards_dir() / f"{project_id}.json"
+
+
+def load_definition(project_id):
+    """A board's dashboard settings, with defaults for anything absent.
+
+    A board with no file is not an error: it has simply never been configured,
+    and the default filter is a reasonable thing to show it.
+    """
+    path = definition_path(project_id)
+    stored = json.loads(path.read_text()) if path.exists() else {}
+    return {"filter": (stored.get("filter") or DEFAULT_FILTER).strip()}
+
+
+def validate_definition(values):
+    """Every problem with a candidate dashboard, empty when it is usable."""
+    problems = []
+    query = str(values.get("filter") or "").strip()
+    if not query:
+        problems.append("A filter is required. Use is:open to include everything open.")
+    elif len(query) > MAX_FILTER_LENGTH:
+        problems.append(
+            f"That filter is {len(query)} characters; the limit is "
+            f"{MAX_FILTER_LENGTH}.")
+    elif "\n" in query:
+        problems.append("A filter has to be a single line.")
+    return problems
+
+
+def save_definition(project_id, values):
+    """Write a board's dashboard settings. Returns what was stored."""
+    problems = validate_definition(values)
+    if problems:
+        raise ValueError("\n".join(problems))
+
+    path = definition_path(project_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    stored = {"filter": str(values["filter"]).strip()}
+    # Same write-then-rename as the report definitions: a half-written file
+    # would break the dashboard for a board rather than just this save.
+    temp_path = path.with_suffix(".json.tmp")
+    temp_path.write_text(json.dumps(stored, indent=2, ensure_ascii=False) + "\n")
+    os.replace(temp_path, path)
+    return stored
 
 
 def cache_paths(project_id):
@@ -100,7 +164,8 @@ def fetch(project_id=None):
 
     # fetch_board_items takes the shape a report definition has; the dashboard
     # has no definition, so it passes the same two keys directly.
-    definition = {"filter": DASHBOARD_FILTER,
+    stored = load_definition(project["id"])
+    definition = {"filter": stored["filter"],
                   "project_number": project["project_number"]}
     board, issues, matched, seen = fetch_board_items(
         definition, project, account, scope)
@@ -114,7 +179,7 @@ def fetch(project_id=None):
         "project": project["id"],
         "project_label": project["label"],
         "board": {"number": board["number"], "title": board["title"]},
-        "filter": DASHBOARD_FILTER,
+        "filter": stored["filter"],
         "statuses": board_statuses(project, account),
         "issue_ids": [issue["id"] for issue in issues],
         "timelines": fetch_histories([issue["id"] for issue in issues], account),

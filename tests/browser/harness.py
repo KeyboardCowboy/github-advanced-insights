@@ -50,6 +50,11 @@ class BrowserTest(unittest.TestCase):
     # offers Refresh -- but it is not the state to test charts and filters in.
     PREBUILD_REPORTS = ()
 
+    # Extra environment for the server subprocess. Lets a class reproduce a
+    # deployment that differs from this machine -- a container with no `gh`
+    # installed, say, which is where the demo's refresh error came from.
+    SERVER_ENV = {}
+
     @classmethod
     def setUpClass(cls):
         cls._tmp = tempfile.mkdtemp(prefix="gh-insights-browser-")
@@ -69,7 +74,8 @@ class BrowserTest(unittest.TestCase):
             cwd=REPO_ROOT,
             env={**os.environ,
                  "GH_INSIGHTS_HOME": str(cls.workspace),
-                 "PORT": str(cls.port)},
+                 "PORT": str(cls.port),
+                 **cls.SERVER_ENV},
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         cls._await_server()
 

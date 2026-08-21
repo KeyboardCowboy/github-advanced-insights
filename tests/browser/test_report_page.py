@@ -272,5 +272,79 @@ class RememberedScope(BrowserTest):
         self.assertIsNone(stored["project"], stored)
 
 
+class SingleOptionReadout(BrowserTest):
+    """One account and one board — the fixture workspace as it ships.
+
+    Previously both controls rendered as nothing here, so the sidebar said
+    nothing about which board the reports came from and changed shape depending
+    on how many accounts happened to be configured (#40).
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def test_the_only_project_is_named_rather_than_hidden(self):
+        expect(self.page.locator("#scope-project-fixed")).to_have_text("Acme Delivery")
+
+    def test_it_is_a_statement_not_a_dropdown(self):
+        # A select with one option invites a choice that does not exist.
+        expect(self.page.locator("#scope-project")).to_have_count(0)
+
+    def test_the_label_is_still_there(self):
+        labels = self.page.locator("#scope-filters label").all_text_contents()
+        self.assertIn("Project", labels)
+
+    def test_the_reports_are_not_filtered_by_it(self):
+        # The readout describes the scope; it does not narrow anything, because
+        # with one value there is nothing to narrow to.
+        expect(self.page.locator(".report-link")).to_have_count(6)
+        self.assertNoPageErrors()
+
+
+class ReadoutAndControlTogether(BrowserTest):
+    """Two boards on one account: a real choice of board, none of account."""
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    @classmethod
+    def prepare_workspace(cls):
+        cls.write_workspace_json("accounts.json", {
+            "accounts": [{"id": "work", "label": "Work", "gh_account": "octocat"}],
+            "default_account": "work",
+        })
+        cls.write_workspace_json("projects.json", {
+            "projects": [
+                {"id": "acme-board", "label": "Acme Delivery", "account": "work",
+                 "owner": "acme", "owner_type": "organization", "project_number": 1},
+                {"id": "beta-board", "label": "Beta Platform", "account": "work",
+                 "owner": "acme", "owner_type": "organization", "project_number": 7},
+            ],
+            "default_project": "acme-board",
+        })
+        definition = json.loads(
+            (cls.workspace / "definitions" / "baseline.json").read_text())
+        definition["project"] = "beta-board"
+        definition["copy"] = {"title": "Beta Report"}
+        (cls.workspace / "definitions" / "beta-report.json").write_text(
+            json.dumps(definition))
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def test_the_single_account_reads_out_while_the_boards_stay_a_dropdown(self):
+        expect(self.page.locator("#scope-account-fixed")).to_have_text("Work")
+        expect(self.page.locator("#scope-account")).to_have_count(0)
+        expect(self.page.locator("#scope-project")).to_have_count(1)
+
+    def test_the_board_dropdown_still_filters(self):
+        self.page.select_option("#scope-project", "beta-board")
+        expect(self.page.locator(".report-link")).to_have_count(1)
+        self.assertNoPageErrors()
+
+
 if __name__ == "__main__":
     unittest.main()

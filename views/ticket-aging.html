@@ -120,6 +120,13 @@
     border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; width: 100%;
   }
   .scope select:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  /* The single-option case. Sized and spaced like the select it replaces so the
+     sidebar keeps its shape, but flat and unbordered: it is a statement of what
+     you are looking at, not a control that failed to open. */
+  .scope-fixed {
+    font-size: 13px; color: var(--ink); padding: 7px 9px; margin: 0;
+    border: 1px solid transparent; border-radius: 5px; background: var(--surface-2);
+  }
   .create-link {
     display: block; margin-top: 8px; padding: 9px 12px; border-radius: 5px;
     font-size: 13px; font-weight: 500; text-align: left;
@@ -700,8 +707,8 @@
   function drawScopeFilters() {
     const accounts = [...new Map(summaries.map(r =>
       [r.account, r.account_label])).entries()];
-    // A filter over one value tells the reader nothing, so it stays hidden
-    // until there is an actual choice to make.
+    // With one value there is nothing to choose, so the filter is not a filter.
+    // It still gets shown, as a label -- see readout below.
     if (accounts.length < 2) scope.account = null;
 
     const inAccount = summaries.filter(r =>
@@ -721,9 +728,23 @@
         </select>
       </div>`;
 
+    // One option used to render nothing at all, which left the reader with no
+    // statement of which board they were looking at -- and the sidebar changed
+    // shape depending on how many accounts happened to be configured. Naming
+    // the single value costs one line and answers the question directly.
+    const readout = (key, label, [, text]) => `
+      <div class="scope">
+        <label>${label}</label>
+        <p class="scope-fixed" id="scope-${key}-fixed">${escapeHtml(text)}</p>
+      </div>`;
+
+    const half = (key, label, entries) =>
+      entries.length > 1 ? control(key, label, entries)
+      : entries.length === 1 ? readout(key, label, entries[0])
+      : "";   // nothing configured yet; the empty state belongs to the sidebar
+
     $("scope-filters").innerHTML =
-      (accounts.length > 1 ? control("account", "Account", accounts) : "")
-      + (projects.length > 1 ? control("project", "Project", projects) : "");
+      half("account", "Account", accounts) + half("project", "Project", projects);
 
     for (const key of ["account", "project"]) {
       const select = $(`scope-${key}`);

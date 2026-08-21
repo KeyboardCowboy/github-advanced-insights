@@ -397,7 +397,7 @@ class Handler(BaseHTTPRequestHandler):
         """Projects belonging to an owner, filtered by a search term.
 
         A picker rather than a plain dropdown because an owner can have
-        hundreds of projects: nyulh has over 200, most of them untitled
+        hundreds of projects: a large organization can have hundreds, most of them untitled
         personal boards. The term is passed to GitHub's own filter.
         """
         owner = (params.get("owner") or [""])[0].strip()

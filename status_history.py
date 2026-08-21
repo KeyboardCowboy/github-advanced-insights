@@ -26,9 +26,9 @@ Caveats worth knowing before quoting a number from this:
     project. Use --project to narrow to one.
 
 Usage:
-  python3 status_history.py 2422 --repo nyulh/ContentHub-Board
-  python3 status_history.py 2422 2283 --repo nyulh/ContentHub-Board --project 172
-  python3 status_history.py 2422 --repo nyulh/ContentHub-Board --status "Ready for QA"
+  python3 status_history.py 101 --repo acme/example-board
+  python3 status_history.py 101 102 --repo acme/example-board --project 1
+  python3 status_history.py 101 --repo acme/example-board --status "Ready for QA"
 """
 import argparse
 import json
@@ -213,14 +213,14 @@ def main():
     parser.add_argument("numbers", nargs="+", type=int, help="Issue number(s)")
     parser.add_argument(
         "--repo", required=True, metavar="OWNER/NAME",
-        help="Repository the issue numbers belong to, e.g. nyulh/ContentHub-Board",
+        help="Repository the issue numbers belong to, e.g. acme/example-board",
     )
     parser.add_argument("--project", type=int, help="Only report this project board number")
     parser.add_argument("--status", help="Also total time spent in this status")
     args = parser.parse_args()
 
     if "/" not in args.repo:
-        sys.exit("--repo must look like OWNER/NAME, e.g. nyulh/ContentHub-Board")
+        sys.exit("--repo must look like OWNER/NAME, e.g. acme/example-board")
     owner, repo = args.repo.split("/", 1)
 
     now = datetime.now(timezone.utc)

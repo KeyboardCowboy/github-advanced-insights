@@ -1,6 +1,6 @@
 # Roadmap
 
-Design notes and decisions carried over from this tool's first life inside the NYU Langone
+Design notes and decisions carried over from this tool's first life inside an enterprise
 wiki repository, where it was built between 2026-08-19 and its extraction here. Kept as one
 document rather than split into issues so the reasoning stays attached to each decision;
 the intent is to file these as issues and let this file shrink.
@@ -53,7 +53,7 @@ It does not need to invent any. The board already publishes its own vocabulary, 
 workflow order, for one GraphQL point:
 
 ```graphql
-{ organization(login: "nyulh") { projectV2(number: 172) {
+{ organization(login: "acme") { projectV2(number: 1) {
     field(name: "Status") { ... on ProjectV2SingleSelectField { options { name } } } } } }
 ```
 
@@ -149,7 +149,7 @@ Not chosen yet.
 interface above because the two constrain each other.
 
 **Scope note (2026-08-19):** this whole section is for the open-source ambition, **not for
-the NYU Langone deployment**. That deployment has no GitHub Pages and stays entirely
+the original enterprise deployment**. That deployment has no GitHub Pages and stays entirely
 local: the local server for browsing, local JSON files for definitions, `gh` auth for
 data, and published artifacts for sharing a single report. Nothing below is on the path to
 a working tool here. It matters only if the tool is published for others to adopt.
@@ -258,7 +258,7 @@ is a workflow file, a repo secret, and documentation.
 
 **Constraint on Phase 2 for this deployment.** A scheduled workflow needs a token secret
 with `read:project`, and the auto-injected `GITHUB_TOKEN` cannot supply it. Chris cannot
-currently create a PAT, so unless NYU Langone will issue a fine-grained PAT or a GitHub
+currently create a PAT, so unless the organisation will issue a fine-grained PAT or a GitHub
 App for this, **auto-refresh is a capability adopters get and this deployment does not**.
 Local refresh stays the path here. Confirm with security before planning around it.
 
@@ -269,7 +269,7 @@ site built from a **private** repo is still served publicly.
 
 These reports carry issue numbers, full issue titles, and timing data for internal work,
 so any adopter needs to weigh that before publishing. It does not apply to the NYU
-Langone deployment, which has no Pages and shares individual reports as private
+enterprise deployment, which has no Pages and shares individual reports as private
 artifacts instead.
 
 ## Sequencing note
@@ -482,8 +482,8 @@ holds whatever you logged in with:
 
 | Account | Token prefix | Type |
 |---|---|---|
-| Chris-Albrecht_NYULH | `gho_` | OAuth user-to-server token, GitHub CLI OAuth app, browser/device flow |
-| KeyboardCowboy | `ghp_` | classic personal access token |
+| a work SSO account | `gho_` | OAuth user-to-server token, GitHub CLI OAuth app, browser/device flow |
+| a personal account | `ghp_` | classic personal access token |
 
 So "gh auth vs a PAT" is a false choice: `gh auth login` can produce either, and a PAT can
 be handed to it with `--with-token`.
@@ -545,7 +545,7 @@ Not adopted. Auth and visibility are separate concerns, and coupling them makes 
 worse in four ways:
 
 1. **"Accessible" costs a request per connection.** Verified 2026-08-19: the personal
-   account cannot resolve `nyulh` at all ("Could not resolve to an Organization"), so
+   account cannot resolve `acme` at all ("Could not resolve to an Organization"), so
    accessibility is only knowable by asking GitHub, and the answer arrives as an error
    rather than a boolean. Six connections would mean six calls before the sidebar renders.
 2. **Per-connection auth removes the reason to switch.** If each connection resolves its
@@ -561,8 +561,8 @@ worse in four ways:
 The underlying need, keeping three contexts from cluttering one sidebar, is real. Two
 cleaner answers:
 
-- **Separate repositories per context.** Right for organisational separation: Langone
-  reports in the Langone wiki, personal ones elsewhere. Genuinely separate and committed
+- **Separate repositories per context.** Right for organisational separation: work
+  reports in a work wiki, personal ones elsewhere. Genuinely separate and committed
   separately, with no hidden state.
 - **A show/hide toggle by connection**, stored as a local UI preference rather than derived
   from auth.
@@ -597,7 +597,7 @@ below.
 Verified 2026-08-19.
 
 `projectV2.repositories` exists and lists a project's linked repositories (board 172
-returns exactly 1, `nyulh/ContentHub-Board`), so repos *can* be inferred. But the better
+returns exactly 1, `acme/example-board`), so repos *can* be inferred. But the better
 answer is that the tool should not carry a repo at all.
 
 Timelines are currently fetched with `repository(owner, name) { issue(number) }`, which
@@ -641,7 +641,7 @@ state.
 `projectsV2(first:n, query:"...")` lists an owner's projects for 1 point, so the form can
 offer real projects rather than asking for a number from a URL.
 
-**But `nyulh` returned 205 projects**, many of them "@someone's untitled project". A plain
+**But that organisation returned 205 projects**, many of them "@someone's untitled project". A plain
 `<select>` of that length is unusable. The field needs a search box that passes its input
 to the `query:` parameter and shows matches, not a dropdown of everything.
 

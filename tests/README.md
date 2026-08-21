@@ -147,3 +147,26 @@ already caught here:
   replaced and its result box never appears; only failures report in place.
   Waiting for the wrong one of those burns the full timeout and reads as a hang
   rather than as the failure it is.
+
+### One workspace per class
+
+`setUpClass` copies the fixtures once, so every test in a class shares the
+result. Anything that writes — saving a report, reordering, deleting — leaves
+that behind for the tests after it, and unittest runs methods in alphabetical
+order, not the order they appear in the file.
+
+This has bitten twice. A delete test ran first and removed the definition two
+later tests were reading. Two reorder tests each assumed the shipped order, and
+the second saw what the first had left.
+
+Two ways out, both used here:
+
+- **Write assertions against the list as it stands**, not against fixed slugs —
+  drag the last onto the first and assert *that* moved, rather than naming one.
+- **Give a destructive test its own class**, which buys it its own workspace.
+  `DeletingAReport` exists for exactly that reason.
+
+The same goes for anything the *tool* refuses to do twice. Two tests that each
+create a report titled "Waiting on Review" only passed while a duplicate title
+silently overwrote the first one; once that was fixed (#32), the second was
+correctly refused.

@@ -110,11 +110,35 @@ class ScopeFilters(BrowserTest):
         self.assertTrue(self.page.locator("#scope-account").is_visible())
         self.assertTrue(self.page.locator("#scope-project").is_visible())
 
-    def test_filtering_by_project_narrows_the_report_list(self):
-        self.assertIn("beta-report", self.visible_slugs())
+    def test_the_board_dropdown_offers_no_all(self):
+        """#41: pooling boards produces a list you cannot read.
+
+        A report's title says which column it measures, never which board it
+        came from, so two boards each with an "In Progress" report give the
+        reader two identical-looking entries and no way to tell them apart.
+        """
+        options = self.page.locator("#scope-project option").all_text_contents()
+        self.assertNotIn("All", options)
+        self.assertEqual(sorted(options), ["Acme Delivery", "Beta Platform"])
+
+    def test_the_account_dropdown_still_offers_all(self):
+        # Accounts are named on every board, so pooling them stays readable.
+        self.assertIn("All", self.page.locator("#scope-account option").all_text_contents())
+
+    def test_a_board_is_selected_from_the_start(self):
+        # There is no unscoped state to land in, so the opening view is the
+        # board of the report being shown.
+        expect(self.page.locator("#scope-project")).to_have_value("acme-board")
+        self.assertNotIn("beta-report", self.visible_slugs())
+
+    def test_switching_boards_switches_the_list(self):
         self.page.select_option("#scope-project", "beta-board")
         expect(self.page.locator(".report-link")).to_have_count(1)
         self.assertEqual(self.visible_slugs(), ["beta-report"])
+
+        self.page.select_option("#scope-project", "acme-board")
+        expect(self.page.locator(".report-link")).to_have_count(6)
+        self.assertNotIn("beta-report", self.visible_slugs())
 
     def test_filtering_by_account_narrows_to_that_accounts_boards(self):
         self.page.select_option("#scope-account", "personal")
@@ -154,12 +178,14 @@ class ScopeFilters(BrowserTest):
         expect(self.page.locator(
             '.report-link[data-slug="beta-report"][aria-current="true"]')).to_have_count(1)
 
-    def test_selecting_all_restores_every_report(self):
-        self.page.select_option("#scope-project", "beta-board")
-        expect(self.page.locator(".report-link")).to_have_count(1)
-        self.page.select_option("#scope-project", "")
-        expect(self.page.locator(".report-link")).to_have_count(7)
-        self.assertIn("beta-report", self.visible_slugs())
+    def test_widening_the_account_to_all_offers_every_board(self):
+        # "All" survives on Account, and widening it puts both boards back on
+        # offer without pooling their reports into one list.
+        self.page.select_option("#scope-account", "personal")
+        expect(self.page.locator("#scope-project")).to_have_count(0)
+
+        self.page.select_option("#scope-account", "")
+        expect(self.page.locator("#scope-project option")).to_have_count(2)
 
 
 class RememberedScope(BrowserTest):
@@ -194,25 +220,25 @@ class RememberedScope(BrowserTest):
         expect(self.page.locator("#scope-project")).to_have_value("beta-board")
         self.assertEqual(self.visible_slugs(), ["beta-report"])
 
-    def test_selecting_all_is_remembered_too(self):
-        # Clearing a filter is as deliberate as setting one, so it has to stick
-        # rather than being read as "nothing saved yet".
+    def test_switching_back_is_remembered_too(self):
+        # Returning to the board you started on is as deliberate as leaving it,
+        # so it has to stick rather than being read as "nothing saved yet".
         self.goto("/")
         self.page.select_option("#scope-project", "beta-board")
         expect(self.page.locator(".report-link")).to_have_count(1)
-        self.page.select_option("#scope-project", "")
-        expect(self.page.locator(".report-link")).to_have_count(7)
+        self.page.select_option("#scope-project", "acme-board")
+        expect(self.page.locator(".report-link")).to_have_count(6)
 
         self.goto("/")
-        expect(self.page.locator("#scope-project")).to_have_value("")
-        self.assertIn("beta-report", self.visible_slugs())
+        expect(self.page.locator("#scope-project")).to_have_value("acme-board")
+        self.assertNotIn("beta-report", self.visible_slugs())
 
-    def test_a_filter_naming_something_that_no_longer_exists_falls_back_to_all(self):
+    def test_a_board_that_no_longer_exists_resolves_to_the_one_on_screen(self):
         """A board can be deleted in Settings between visits.
 
-        Restoring the filter blindly would match nothing and show an empty
-        sidebar with no explanation -- the reader would have a working tool that
-        looks broken.
+        Restoring it blindly would match nothing and show an empty sidebar with
+        no explanation -- a working tool that looks broken. With no "All" to
+        fall back to, it resolves to the board of the report being shown.
         """
         self.goto("/")
         self.page.evaluate(
@@ -220,8 +246,8 @@ class RememberedScope(BrowserTest):
             " JSON.stringify({account: null, project: 'board-that-was-deleted'}))")
         self.goto("/")
 
-        expect(self.page.locator("#scope-project")).to_have_value("")
-        self.assertIn("beta-report", self.visible_slugs())
+        expect(self.page.locator("#scope-project")).to_have_value("acme-board")
+        expect(self.page.locator(".report-link")).not_to_have_count(0)
         self.assertNoPageErrors()
 
     def test_a_corrupt_stored_filter_is_ignored_rather_than_thrown_on(self):
@@ -233,12 +259,14 @@ class RememberedScope(BrowserTest):
         expect(self.page.locator(".report-link")).not_to_have_count(0)
         self.assertNoPageErrors()
 
-    def test_a_remembered_filter_that_would_hide_the_remembered_report_is_cleared(self):
+    def test_a_remembered_scope_that_would_hide_the_remembered_report_gives_way(self):
         """Both are remembered, and they can contradict each other.
 
         The report wins: it is what the reader came back for, and a narrowing
         set on an earlier visit is easy to have forgotten. Losing the report
-        instead would look like it had been deleted.
+        instead would look like it had been deleted. The scope moves to that
+        report's board rather than opening up, since there is nowhere open to
+        move to.
         """
         self.goto("/")
         self.page.evaluate(
@@ -248,12 +276,12 @@ class RememberedScope(BrowserTest):
             " JSON.stringify({account: null, project: 'beta-board'}))")
         self.goto("/")
 
-        # 'overflow' lives on acme-board, so the beta-board filter would hide it.
+        # 'overflow' lives on acme-board, so the beta-board scope would hide it.
         expect(self.page.locator(
             '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
-        expect(self.page.locator("#scope-project")).to_have_value("")
+        expect(self.page.locator("#scope-project")).to_have_value("acme-board")
 
-    def test_clearing_that_conflict_is_persisted_not_just_applied(self):
+    def test_resolving_that_conflict_is_persisted_not_just_applied(self):
         # Otherwise the same contradiction is resolved again on every load, and
         # the stored filter stays permanently at odds with what is on screen.
         self.goto("/")
@@ -265,11 +293,85 @@ class RememberedScope(BrowserTest):
         self.goto("/")
         # Wait for boot to settle before reading storage: goto returns on load,
         # and boot resolves the conflict asynchronously after that.
-        expect(self.page.locator("#scope-project")).to_have_value("")
+        expect(self.page.locator("#scope-project")).to_have_value("acme-board")
 
         stored = self.page.evaluate(
             "JSON.parse(localStorage.getItem('ticket-aging:scope'))")
-        self.assertIsNone(stored["project"], stored)
+        self.assertEqual(stored["project"], "acme-board", stored)
+
+
+class SingleOptionReadout(BrowserTest):
+    """One account and one board — the fixture workspace as it ships.
+
+    Previously both controls rendered as nothing here, so the sidebar said
+    nothing about which board the reports came from and changed shape depending
+    on how many accounts happened to be configured (#40).
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def test_the_only_project_is_named_rather_than_hidden(self):
+        expect(self.page.locator("#scope-project-fixed")).to_have_text("Acme Delivery")
+
+    def test_it_is_a_statement_not_a_dropdown(self):
+        # A select with one option invites a choice that does not exist.
+        expect(self.page.locator("#scope-project")).to_have_count(0)
+
+    def test_the_label_is_still_there(self):
+        labels = self.page.locator("#scope-filters label").all_text_contents()
+        self.assertIn("Project", labels)
+
+    def test_the_reports_are_not_filtered_by_it(self):
+        # The readout describes the scope; it does not narrow anything, because
+        # with one value there is nothing to narrow to.
+        expect(self.page.locator(".report-link")).to_have_count(6)
+        self.assertNoPageErrors()
+
+
+class ReadoutAndControlTogether(BrowserTest):
+    """Two boards on one account: a real choice of board, none of account."""
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    @classmethod
+    def prepare_workspace(cls):
+        cls.write_workspace_json("accounts.json", {
+            "accounts": [{"id": "work", "label": "Work", "gh_account": "octocat"}],
+            "default_account": "work",
+        })
+        cls.write_workspace_json("projects.json", {
+            "projects": [
+                {"id": "acme-board", "label": "Acme Delivery", "account": "work",
+                 "owner": "acme", "owner_type": "organization", "project_number": 1},
+                {"id": "beta-board", "label": "Beta Platform", "account": "work",
+                 "owner": "acme", "owner_type": "organization", "project_number": 7},
+            ],
+            "default_project": "acme-board",
+        })
+        definition = json.loads(
+            (cls.workspace / "definitions" / "baseline.json").read_text())
+        definition["project"] = "beta-board"
+        definition["copy"] = {"title": "Beta Report"}
+        (cls.workspace / "definitions" / "beta-report.json").write_text(
+            json.dumps(definition))
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def test_the_single_account_reads_out_while_the_boards_stay_a_dropdown(self):
+        expect(self.page.locator("#scope-account-fixed")).to_have_text("Work")
+        expect(self.page.locator("#scope-account")).to_have_count(0)
+        expect(self.page.locator("#scope-project")).to_have_count(1)
+
+    def test_the_board_dropdown_still_filters(self):
+        self.page.select_option("#scope-project", "beta-board")
+        expect(self.page.locator(".report-link")).to_have_count(1)
+        self.assertNoPageErrors()
 
 
 if __name__ == "__main__":

@@ -1,0 +1,14 @@
+# This is committed test data, not somebody's workspace.
+#
+# `workspace.ensure()` writes a .gitignore here the first time any command runs
+# against this directory, and the one it writes excludes `cache/` -- correct for
+# a real installation, where the cache is derived and refetchable. Here the raw
+# files ARE the fixture: they are the frozen input the goldens are computed
+# from, and they have to be committed.
+#
+# `ensure()` only writes the file when it is missing, so this one existing is
+# what stops it. Deleting it would not fail anything loudly -- the next fixture
+# added would simply never be committed, and the suite would pass locally and
+# fail on a clean checkout.
+#
+# What genuinely is derived here is listed in tests/fixtures/.gitignore.

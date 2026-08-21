@@ -289,6 +289,31 @@
     letter-spacing: .1em; text-transform: uppercase; fill: var(--ink-3);
   }
   .threshold { stroke: var(--accent-rule); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dashboard-filter label {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3); display: block; margin-bottom: 8px;
+  }
+  .filter-row { display: flex; gap: 8px; align-items: stretch; }
+  .filter-row input {
+    flex: 1; min-width: 0; font: inherit; font-family: var(--font-mono);
+    font-size: 13px; color: var(--ink); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: 5px; padding: 8px 10px;
+  }
+  .filter-row input:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  .dashboard-filter .hint {
+    display: block; margin-top: 8px; font-size: 12px; color: var(--ink-3);
+  }
+  #dashboard-canvas { display: flex; flex-direction: column; gap: var(--view-gap); }
+  .dot { fill: var(--series); fill-opacity: .78; stroke: var(--bg); stroke-width: 1; }
+  .dot:hover { fill-opacity: 1; }
+  /* Percentile lines sit behind the dots and read as reference, not as data. */
+  .band-line { stroke: var(--accent-rule); stroke-width: 1; stroke-dasharray: 4 4; }
+  .band-label {
+    font-family: var(--font-mono); font-size: 10px; fill: var(--ink-3);
+    letter-spacing: .06em;
+  }
+  .column-rule { stroke: var(--grid); stroke-width: 1; }
+  .column-empty { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-3); }
   .threshold-label {
     font-family: var(--font-mono); font-size: 10.5px;
     fill: var(--accent-rule); letter-spacing: .04em;
@@ -375,11 +400,9 @@
 </style>
 
 <header class="masthead">
-  <h1 class="wordmark">Work Item Age by Status</h1>
+  <h1 class="wordmark">Issue Age by Status</h1>
   <p class="metric-def">
-    How long unfinished work has been sitting in its current column, measured right now.
-    <span class="contrast">Cycle time is only available after work is finished. This is the
-    leading indicator you can still act on.</span>
+    How long unfinished work has been sitting in its current status.
   </p>
 </header>
 
@@ -405,10 +428,27 @@
       <p class="lede" id="dashboard-lede"></p>
     </header>
 
-    <section class="card notes">
-      <h3 class="section-title">Nothing here yet</h3>
-      <div class="info-panel" id="dashboard-empty"></div>
-    </section>
+    <p class="meta" id="dashboard-meta"></p>
+
+    <!-- The filter decides what every chart below is about, so it is edited
+         here rather than on a settings page: the thing it governs is on screen
+         while you change it. -->
+    <form class="card dashboard-filter" id="dashboard-filter-form">
+      <label for="dashboard-filter">Issues on this dashboard</label>
+      <div class="filter-row">
+        <input id="dashboard-filter" name="filter" autocomplete="off"
+               spellcheck="false" required>
+        <button type="submit" class="primary" id="dashboard-save">Save</button>
+        <button type="button" class="refresh" id="dashboard-refresh">Refresh</button>
+      </div>
+      <span class="hint">A GitHub project filter. Saving refetches the board and
+        redraws everything below.</span>
+      <div class="result" id="dashboard-result" hidden></div>
+    </form>
+
+    <!-- Charts render into here. Keeping them in one container means adding the
+         next chart is an append rather than another edit of this template. -->
+    <div id="dashboard-canvas"></div>
   </section>
 
   <div id="report-view">
@@ -721,6 +761,10 @@
   const VIEW_KEY = "ticket-aging:view";
   let summaries = [];
   let currentSlug = null;
+  // Which view is on screen. The selected report stays remembered while
+  // the dashboard is open -- going back should return to it -- so "which
+  // report" and "what is being shown" are two different questions.
+  let activeView = "report";
 
   // Compact freshness for the sidebar. The header carries the full timestamp;
   // here the useful question is only "how stale is this?".
@@ -858,7 +902,7 @@
     const link = report => `
       <button type="button" class="report-link" draggable="true"
               data-slug="${escapeHtml(report.slug)}"
-              aria-current="${report.slug === currentSlug}"
+              aria-current="${activeView === "report" && report.slug === currentSlug}"
               title="Drag to reorder, or Alt+Up / Alt+Down">
         <span class="name">${escapeHtml(report.title)}</span>
         <span class="sub">${report.count === null ? "not fetched"
@@ -1001,7 +1045,215 @@
    *  has work waited in *this* column", and the questions that cut across
    *  columns have no column to belong to.
    */
-  function selectDashboard() {
+  /** The aging work-in-progress scatter.
+   *
+   *  One dot per ticket: the column it is in across the bottom, how long it has
+   *  been there up the side. The histograms answer that one column at a time;
+   *  this is the only view where an outlier anywhere in the workflow is visible
+   *  without knowing which report to open first.
+   */
+  function drawScatter(model) {
+    const svg = $("scatter");
+    svg.textContent = "";
+    const W = 900, H = 420;
+    const M = { top: 24, right: 54, bottom: 78, left: 46 };
+    const plotW = W - M.left - M.right;
+    const plotH = H - M.top - M.bottom;
+
+    // Headroom so the oldest dot is not clipped by the top of the plot, and a
+    // floor so a board where everything is new still draws a sane axis.
+    const yMax = Math.max(model.oldest * 1.1, 7);
+    const yScale = days => M.top + plotH - (days / yMax) * plotH;
+
+    const columns = model.columns;
+    const bandW = plotW / Math.max(columns.length, 1);
+
+    for (const tick of [0, yMax / 2, yMax]) {
+      svg.appendChild(el("line", {
+        class: "grid-line", x1: M.left, x2: M.left + plotW,
+        y1: yScale(tick), y2: yScale(tick)
+      }));
+      svg.appendChild(el("text", {
+        class: "tick", x: M.left - 10, y: yScale(tick) + 4, "text-anchor": "end"
+      }, Math.round(tick)));
+    }
+    svg.appendChild(el("text", {
+      class: "axis-title", x: M.left - 30, y: M.top - 10
+    }, "DAYS"));
+
+    // Percentile lines first, so dots sit on top of them rather than under.
+    for (const band of model.bands) {
+      const y = yScale(band.days);
+      svg.appendChild(el("line", {
+        class: "band-line", x1: M.left, x2: M.left + plotW, y1: y, y2: y
+      }));
+      svg.appendChild(el("text", {
+        class: "band-label", x: M.left + plotW + 6, y: y + 3
+      }, `${band.label} ${band.days.toFixed(0)}d`));
+    }
+
+    columns.forEach((column, index) => {
+      const centre = M.left + bandW * (index + 0.5);
+
+      if (index > 0) {
+        svg.appendChild(el("line", {
+          class: "column-rule", x1: M.left + bandW * index, x2: M.left + bandW * index,
+          y1: M.top, y2: M.top + plotH
+        }));
+      }
+
+      // Two lines of label: a column name long enough to matter is a column
+      // name too long to fit, and rotating them makes the axis unreadable.
+      const words = column.status.split(" ");
+      const half = Math.ceil(words.length / 2);
+      [words.slice(0, half).join(" "), words.slice(half).join(" ")]
+        .filter(Boolean)
+        .forEach((line, row) => svg.appendChild(el("text", {
+          class: "tick", x: centre, y: M.top + plotH + 20 + row * 13,
+          "text-anchor": "middle"
+        }, line)));
+      svg.appendChild(el("text", {
+        class: "tick", x: centre, y: M.top + plotH + 48, "text-anchor": "middle"
+      }, column.count ? `${column.count}` : ""));
+
+      if (!column.count) {
+        svg.appendChild(el("text", {
+          class: "column-empty", x: centre, y: M.top + plotH / 2, "text-anchor": "middle"
+        }, "empty"));
+        return;
+      }
+
+      column.tickets.forEach((ticket, position) => {
+        // Spread dots across the column rather than stacking them on the
+        // centre line, where equal ages would hide each other completely.
+        const spread = Math.min(bandW * 0.34, 42);
+        const offset = column.tickets.length === 1
+          ? 0
+          : ((position % 7) / 6 - 0.5) * 2 * spread;
+        const dot = el("circle", {
+          class: "dot", cx: centre + offset, cy: yScale(ticket.days), r: 5,
+          "data-number": ticket.number
+        });
+        dot.addEventListener("mouseenter", event => showDotTooltip(event, `
+          <div class="tt-head">#${ticket.number} &middot; `
+          + `${escapeHtml(ticket.days_display)} days in `
+          + `${escapeHtml(column.status)}</div>`
+          + `<div class="tt-list">${escapeHtml(ticket.title)}</div>`));
+        dot.addEventListener("mouseleave", hideTooltip);
+        svg.appendChild(dot);
+      });
+    });
+  }
+
+  function showDotTooltip(event, html) {
+    tooltip.innerHTML = html;
+    tooltip.style.opacity = "1";
+    const rect = event.target.getBoundingClientRect();
+    const x = event.clientX ?? rect.left + rect.width / 2;
+    const y = event.clientY ?? rect.top;
+    tooltip.style.left = Math.min(x + 14, window.innerWidth - 275) + "px";
+    tooltip.style.top = Math.max(y - 12, 8) + "px";
+  }
+
+  /** Draw the canvas: every chart the dashboard has, from one view model.
+   *
+   *  The canvas is rebuilt whole rather than patched, so adding the next chart
+   *  is an append here and nothing else. Charts live in one container so the
+   *  page above them stays a template.
+   */
+  function renderCanvas(model) {
+    const canvas = $("dashboard-canvas");
+    canvas.textContent = "";
+    if (!model) {
+      canvas.innerHTML =
+        `<section class="card notes"><h3 class="section-title">No data yet</h3>`
+        + `<p>This board has not been fetched. Save the filter above, or press `
+        + `Refresh, to pull it.</p></section>`;
+      return;
+    }
+
+    const oldest = model.columns.flatMap(c => c.tickets)
+      .sort((a, b) => b.days - a.days)[0];
+    const band = label => (model.bands.find(b => b.label === label) || {}).days;
+
+    const stats = document.createElement("section");
+    stats.className = "stats";
+    stats.id = "dashboard-stats";
+    stats.innerHTML = [
+      ["Tickets", String(model.total), "", "open across every column"],
+      ["Median age", (band("p50") ?? 0).toFixed(1), "d", "half are younger"],
+      ["85th percentile", (band("p85") ?? 0).toFixed(1), "d", "the usual worst case"],
+      ["Oldest", (model.oldest || 0).toFixed(0), "d",
+       oldest ? `#${oldest.number}` : "nothing yet"],
+    ].map(([label, value, unit, note]) => `
+      <div class="stat">
+        <p class="stat-label">${escapeHtml(label)}</p>
+        <p class="stat-value">${escapeHtml(value)}<span class="unit">${unit}</span></p>
+        <p class="stat-note">${escapeHtml(note)}</p>
+      </div>`).join("");
+    canvas.appendChild(stats);
+
+    const chart = document.createElement("section");
+    chart.className = "card";
+    chart.innerHTML = `
+      <div class="card-head">
+        <h3 class="section-title">Aging work in progress</h3>
+        <p class="card-sub">Every ticket the filter matches, placed in the column
+          it is in now and aged from the moment it got there. Dashed lines are
+          percentiles across the whole board, not per column.</p>
+      </div>
+      <div class="chart-scroll"><svg id="scatter" viewBox="0 0 900 420" role="img"
+        aria-label="Scatter of every ticket, by the column it is in and how long
+                    it has been there"></svg></div>`;
+    canvas.appendChild(chart);
+    drawScatter(model);
+
+    const notes = [];
+    const offBoard = model.columns.filter(c => c.off_board && c.count);
+    if (offBoard.length) {
+      notes.push(`<strong>${offBoard.length} column(s) are no longer on the board.</strong> `
+        + `${offBoard.map(c => escapeHtml(c.status)).join(", ")} still hold tickets, `
+        + `so they are drawn after the board's own columns rather than dropped.`);
+    }
+    if (model.unknown.length) {
+      notes.push(`<strong>${model.unknown.length} ticket(s) could not be aged.</strong> `
+        + `Their board history predates GitHub's status events, so there is no `
+        + `move to measure from. They are left out of the chart rather than `
+        + `drawn at zero, which would read as brand new work.`);
+    }
+    notes.push("Ages are wall-clock days, including weekends.");
+
+    const notesCard = document.createElement("section");
+    notesCard.className = "card notes";
+    notesCard.id = "dashboard-notes";
+    notesCard.innerHTML = `<h3 class="section-title">Reading this correctly</h3>`
+      + `<ul id="dashboard-note-list">`
+      + notes.map(note => `<li>${note}</li>`).join("") + `</ul>`;
+    canvas.appendChild(notesCard);
+  }
+
+  /** Apply a whole dashboard payload: its settings and whatever data it has. */
+  function renderDashboard(payload) {
+    const model = payload.model;
+    $("dashboard-filter").value = payload.definition.filter;
+    $("dashboard-meta").innerHTML = model
+      ? `BOARD ${model.board.number} &middot; ${escapeHtml(model.board.title)}`
+        + ` / LAST UPDATED ${escapeHtml(model.updated_display)}`
+      : "NO BOARD DATA &middot; LAST UPDATED NEVER";
+    $("footer").textContent =
+      [payload.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
+    renderCanvas(model);
+  }
+
+  function showDashboardResult(kind, message) {
+    const box = $("dashboard-result");
+    box.className = `result ${kind}`;
+    box.innerHTML = message;
+    box.hidden = false;
+  }
+
+  async function selectDashboard() {
+    activeView = "dashboard";
     localStorage.setItem(VIEW_KEY, "dashboard");
     $("dashboard-view").hidden = false;
     $("report-view").hidden = true;
@@ -1020,13 +1272,74 @@
     // whatever the scope says, and there is no report to name.
     $("footer").textContent =
       [board && board.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
-    $("dashboard-empty").innerHTML =
-      "<p>No charts on this dashboard yet. The first will be an aging "
-      + "work-in-progress scatter: every column across the bottom, one dot per "
-      + "ticket, age up the side.</p>";
+    $("dashboard-result").hidden = true;
+    await loadDashboard(board && board.project);
+  }
+
+  /** Fetch and draw the board-level view model, or say why there is none.
+   *
+   *  Never fetched is a normal state rather than an error -- the same reasoning
+   *  as a report that has never been refreshed -- so it shows the empty view
+   *  and points at the control that fixes it.
+   */
+  async function loadDashboard(projectId) {
+    if (!projectId) return renderCanvas(null);
+    const response = await fetch(`/api/dashboard/${encodeURIComponent(projectId)}`);
+    if (!response.ok) return renderCanvas(null);
+    renderDashboard(await response.json());
+  }
+
+  /** Save the filter, which is also what refetches under it.
+   *
+   *  Saving without refetching would leave the charts describing the previous
+   *  filter while the field showed the new one -- a page that looks settled and
+   *  is not, which is the failure this tool has to be most careful about.
+   */
+  async function saveDashboard(event) {
+    event.preventDefault();
+    await submitDashboard(`/api/dashboard/${encodeURIComponent(currentBoard())}`,
+                          "PUT", { filter: $("dashboard-filter").value },
+                          "Saved and refetched.");
+  }
+
+  async function refreshDashboard() {
+    await submitDashboard(
+      `/api/dashboard/${encodeURIComponent(currentBoard())}/refresh`,
+      "POST", null, "Up to date.");
+  }
+
+  function currentBoard() {
+    const board = visibleSummaries()[0];
+    return board ? board.project : "";
+  }
+
+  async function submitDashboard(url, method, body, okMessage) {
+    const buttons = [$("dashboard-save"), $("dashboard-refresh")];
+    buttons.forEach(b => { b.disabled = true; });
+    showDashboardResult("", "Fetching from GitHub...");
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : {},
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        const problems = payload.problems || [payload.message || "Could not save."];
+        return showDashboardResult("err",
+          `Not saved:<ul>${problems.map(p => `<li>${escapeHtml(p)}</li>`).join("")}</ul>`);
+      }
+      renderDashboard(payload);
+      showDashboardResult("ok", escapeHtml(okMessage));
+    } catch (error) {
+      showDashboardResult("err", escapeHtml(error.message));
+    } finally {
+      buttons.forEach(b => { b.disabled = false; });
+    }
   }
 
   async function selectReport(slug) {
+    activeView = "report";
     $("dashboard-view").hidden = true;
     $("report-view").hidden = false;
     $("controls").hidden = false;
@@ -1097,6 +1410,8 @@
     summaries = (await response.json()).reports;
     $("sidebar").hidden = false;
     $("dashboard-link").addEventListener("click", selectDashboard);
+    $("dashboard-refresh").addEventListener("click", refreshDashboard);
+    $("dashboard-filter-form").addEventListener("submit", saveDashboard);
     restoreScope();
 
     const remembered = localStorage.getItem(LAST_REPORT_KEY);

@@ -81,14 +81,36 @@ def graphql(query, account=None):
         # quoting -- the question is only whether this board has that column.
         known = any(s in composed for s in BOARD_STATUSES)
         if not known:
-            return {scope: {"projectV2": {"items": {"totalCount": 0, "nodes": []}}}}
-        return {scope: {"projectV2": {"items": {
-            "totalCount": 2,
-            "nodes": [
-                {"content": {"number": 105, "title": "Fixture issue one"}},
-                {"content": {"number": 203, "title": "Fixture issue two"}},
-            ],
-        }}}}
+            return {scope: {"projectV2": {"items": {
+                "totalCount": 0,
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "nodes": [],
+            }}}}
+        # Two callers ask for items with a query: the report form's filter
+        # preview, which wants only counts and titles, and the dashboard fetch,
+        # which wants the board's identity and each issue's node id. Answering
+        # with the union keeps one branch honest for both -- the preview simply
+        # ignores the fields it did not ask for, as it would with the real API.
+        return {scope: {"projectV2": {
+            "number": 1,
+            "title": BOARD_TITLE,
+            "items": {
+                "totalCount": 2,
+                # Every items response carries pageInfo, because the fetch loop
+                # reads it to decide whether to ask for another page (#1). A
+                # stub without it takes the tool down a path it never takes.
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "nodes": [
+                    {"content": {
+                        "id": f"I_stub{number}", "number": number,
+                        "title": f"Fixture issue {number}",
+                        "url": f"https://example.invalid/{number}",
+                        "repository": {"nameWithOwner": REPOSITORIES[index]},
+                    }}
+                    for index, number in enumerate((105, 203))
+                ],
+            },
+        }}}
 
     if "projectV2(" in query:
         number = int(re.search(r"projectV2\(number:\s*(\d+)", query).group(1))
@@ -102,6 +124,32 @@ def graphql(query, account=None):
             "repositories": {"nodes": [{"nameWithOwner": r} for r in REPOSITORIES]},
             "field": {"options": [{"name": s} for s in BOARD_STATUSES]},
         }}}
+
+    if "nodes(ids:" in query and "timelineItems" in query:
+        # The timeline batch. Answers with the ids it was asked for and one
+        # status change each, so a refresh completes end to end rather than
+        # stopping halfway with a board fetched and no history to age it by.
+        ids = re.findall(r'"([^"]+)"', query)
+        return {"nodes": [
+            {
+                "id": node_id,
+                "number": 100 + index,
+                "title": f"Stubbed issue {100 + index}",
+                "url": f"https://example.invalid/{100 + index}",
+                "repository": {"nameWithOwner": REPOSITORIES[index % len(REPOSITORIES)]},
+                "timelineItems": {
+                    "totalCount": 1,
+                    "nodes": [{
+                        "createdAt": "2026-06-10T09:00:00Z",
+                        "previousStatus": "Todo/Ready",
+                        "status": BOARD_STATUSES[index % 3 + 1],
+                        "actor": {"login": "a-person"},
+                        "project": {"number": 1, "title": BOARD_TITLE},
+                    }],
+                },
+            }
+            for index, node_id in enumerate(ids)
+        ]}
 
     raise AssertionError(
         "fake_github has no answer for this query. Add one rather than "

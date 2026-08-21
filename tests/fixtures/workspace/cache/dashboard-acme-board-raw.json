@@ -1,0 +1,663 @@
+{
+  "fetched_at": "2026-06-15T12:00:00+00:00",
+  "project": "acme-board",
+  "project_label": "Acme Delivery",
+  "board": {
+    "number": 1,
+    "title": "Acme Delivery"
+  },
+  "filter": "is:open -type:Epic,Feature",
+  "statuses": [
+    "Todo/Ready",
+    "In Progress",
+    "Dev Done / Peer Review",
+    "PR Validated",
+    "Ready for QA",
+    "Done"
+  ],
+  "issue_ids": [
+    "I_fixture101",
+    "I_fixture102",
+    "I_fixture103",
+    "I_fixture104",
+    "I_fixture105",
+    "I_fixture201",
+    "I_fixture202",
+    "I_fixture203",
+    "I_fixture301",
+    "I_fixture301b",
+    "I_fixture302",
+    "I_fixture401",
+    "I_fixture402",
+    "I_fixture403",
+    "I_fixture404",
+    "I_fixture405",
+    "I_fixture501",
+    "I_fixture502",
+    "I_fixture503",
+    "I_fixture504",
+    "I_fixture505",
+    "I_fixture506"
+  ],
+  "timelines": {
+    "I_fixture101": {
+      "id": "I_fixture101",
+      "number": 101,
+      "title": "Add pagination to the widget list",
+      "url": "https://github.com/acme/widgets/issues/101",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 2,
+        "nodes": [
+          {
+            "createdAt": "2026-05-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Todo",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          },
+          {
+            "createdAt": "2026-05-04T09:00:00Z",
+            "previousStatus": "Todo",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture102": {
+      "id": "I_fixture102",
+      "number": 102,
+      "title": "Fix off-by-one in the date picker",
+      "url": "https://github.com/acme/widgets/issues/102",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 2,
+        "nodes": [
+          {
+            "createdAt": "2026-05-20T09:00:00Z",
+            "previousStatus": "",
+            "status": "Todo",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          },
+          {
+            "createdAt": "2026-06-01T09:00:00Z",
+            "previousStatus": "Todo",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture103": {
+      "id": "I_fixture103",
+      "number": 103,
+      "title": "Refactor the export job",
+      "url": "https://github.com/acme/widgets/issues/103",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 2,
+        "nodes": [
+          {
+            "createdAt": "2026-06-08T09:00:00Z",
+            "previousStatus": "",
+            "status": "Todo",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          },
+          {
+            "createdAt": "2026-06-09T09:00:00Z",
+            "previousStatus": "Todo",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture104": {
+      "id": "I_fixture104",
+      "number": 104,
+      "title": "Upgrade the build toolchain",
+      "url": "https://github.com/acme/widgets/issues/104",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-13T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture105": {
+      "id": "I_fixture105",
+      "number": 105,
+      "title": "Rework the settings drawer",
+      "url": "https://github.com/acme/widgets/issues/105",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 3,
+        "nodes": [
+          {
+            "createdAt": "2026-04-01T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          },
+          {
+            "createdAt": "2026-04-10T09:00:00Z",
+            "previousStatus": "In Progress",
+            "status": "Todo",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          },
+          {
+            "createdAt": "2026-06-11T09:00:00Z",
+            "previousStatus": "Todo",
+            "status": "In Progress",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture201": {
+      "id": "I_fixture201",
+      "number": 201,
+      "title": "Normal ticket",
+      "url": "https://github.com/acme/widgets/issues/201",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-05T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Review",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture202": {
+      "id": "I_fixture202",
+      "number": 202,
+      "title": "Another normal one",
+      "url": "https://github.com/acme/widgets/issues/202",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-10T09:00:00Z",
+            "previousStatus": "",
+            "status": "In Review",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture203": {
+      "id": "I_fixture203",
+      "number": 203,
+      "title": "History predates status tracking",
+      "url": "https://github.com/acme/widgets/issues/203",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 0,
+        "nodes": []
+      }
+    },
+    "I_fixture301": {
+      "id": "I_fixture301",
+      "number": 301,
+      "title": "Widget crash on save",
+      "url": "https://github.com/acme/widgets/issues/301",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-01T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture301b": {
+      "id": "I_fixture301b",
+      "number": 301,
+      "title": "Tools CLI hangs",
+      "url": "https://github.com/acme/tools/issues/301",
+      "repository": {
+        "nameWithOwner": "acme/tools"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-03T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture302": {
+      "id": "I_fixture302",
+      "number": 302,
+      "title": "Shared library bump",
+      "url": "https://github.com/acme/tools/issues/302",
+      "repository": {
+        "nameWithOwner": "acme/tools"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-09T09:00:00Z",
+            "previousStatus": "",
+            "status": "Blocked",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture401": {
+      "id": "I_fixture401",
+      "number": 401,
+      "title": "Swept ticket 1",
+      "url": "https://github.com/acme/widgets/issues/401",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture402": {
+      "id": "I_fixture402",
+      "number": 402,
+      "title": "Swept ticket 2",
+      "url": "https://github.com/acme/widgets/issues/402",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture403": {
+      "id": "I_fixture403",
+      "number": 403,
+      "title": "Swept ticket 3",
+      "url": "https://github.com/acme/widgets/issues/403",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture404": {
+      "id": "I_fixture404",
+      "number": 404,
+      "title": "Swept ticket 4",
+      "url": "https://github.com/acme/widgets/issues/404",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-02T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture405": {
+      "id": "I_fixture405",
+      "number": 405,
+      "title": "Arrived on its own",
+      "url": "https://github.com/acme/widgets/issues/405",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-10T09:00:00Z",
+            "previousStatus": "",
+            "status": "Ready for QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture501": {
+      "id": "I_fixture501",
+      "number": 501,
+      "title": "Ticket aged 1",
+      "url": "https://github.com/acme/widgets/issues/501",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-15T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture502": {
+      "id": "I_fixture502",
+      "number": 502,
+      "title": "Ticket aged 2",
+      "url": "https://github.com/acme/widgets/issues/502",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-14T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture503": {
+      "id": "I_fixture503",
+      "number": 503,
+      "title": "Ticket aged 3",
+      "url": "https://github.com/acme/widgets/issues/503",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-13T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture504": {
+      "id": "I_fixture504",
+      "number": 504,
+      "title": "Ticket aged 4",
+      "url": "https://github.com/acme/widgets/issues/504",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-11T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture505": {
+      "id": "I_fixture505",
+      "number": 505,
+      "title": "Ticket aged 5",
+      "url": "https://github.com/acme/widgets/issues/505",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-06-01T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    },
+    "I_fixture506": {
+      "id": "I_fixture506",
+      "number": 506,
+      "title": "Ticket aged 6",
+      "url": "https://github.com/acme/widgets/issues/506",
+      "repository": {
+        "nameWithOwner": "acme/widgets"
+      },
+      "timelineItems": {
+        "totalCount": 1,
+        "nodes": [
+          {
+            "createdAt": "2026-04-20T09:00:00Z",
+            "previousStatus": "",
+            "status": "In QA",
+            "actor": {
+              "login": "a-person"
+            },
+            "project": {
+              "number": 1,
+              "title": "Acme Delivery"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

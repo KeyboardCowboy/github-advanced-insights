@@ -50,11 +50,17 @@ class BrowserTest(unittest.TestCase):
     # offers Refresh -- but it is not the state to test charts and filters in.
     PREBUILD_REPORTS = ()
 
+    # Extra environment for the server subprocess. Lets a class reproduce a
+    # deployment that differs from this machine -- a container with no `gh`
+    # installed, say, which is where the demo's refresh error came from.
+    SERVER_ENV = {}
+
     @classmethod
     def setUpClass(cls):
         cls._tmp = tempfile.mkdtemp(prefix="gh-insights-browser-")
         cls.workspace = Path(cls._tmp) / "workspace"
         shutil.copytree(FIXTURE_WORKSPACE, cls.workspace)
+        cls._drop_derived_files()
 
         cls.prepare_workspace()
 
@@ -68,12 +74,26 @@ class BrowserTest(unittest.TestCase):
             cwd=REPO_ROOT,
             env={**os.environ,
                  "GH_INSIGHTS_HOME": str(cls.workspace),
-                 "PORT": str(cls.port)},
+                 "PORT": str(cls.port),
+                 **cls.SERVER_ENV},
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         cls._await_server()
 
         cls._playwright = sync_playwright().start()
         cls.browser = cls._playwright.chromium.launch()
+
+    @classmethod
+    def _drop_derived_files(cls):
+        """Start from the committed raw files and nothing else.
+
+        `build_fixtures.py --update-goldens` leaves view models behind in the
+        fixture workspace. They are gitignored, so CI never sees them -- but
+        copytree does, and then every report has data regardless of what
+        PREBUILD_REPORTS says. That is the worst shape of test bug: green on the
+        machine that wrote it, and a different result on a clean checkout.
+        """
+        for derived in (cls.workspace / "cache").glob("*-view-model.json"):
+            derived.unlink()
 
     @classmethod
     def prepare_workspace(cls):

@@ -82,7 +82,18 @@ def resolve_token(account=None):
     else:
         login = (account or {}).get("gh_account")
         command = ["gh", "auth", "token"] + (["--user", login] if login else [])
-        result = subprocess.run(command, capture_output=True, text=True)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True)
+        except FileNotFoundError:
+            # Not an odd edge: this tool runs anywhere Python does, including
+            # containers and preview environments where gh was never installed.
+            # Left to escape, it surfaces as a bare FileNotFoundError three
+            # layers away from the thing the reader can act on.
+            raise RuntimeError(
+                "The `gh` command is not installed, and this tool reads its "
+                "GitHub token from it. Install the GitHub CLI, or point the "
+                "account at an environment variable holding a token instead."
+            ) from None
         token = result.stdout.strip()
         if result.returncode != 0 or not token:
             who = f"account '{login}'" if login else "the active gh account"

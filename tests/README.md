@@ -52,6 +52,40 @@ a live board cannot be relied on to contain:
 
 Synthetic data also keeps real issue titles out of a public repository.
 
+## The dashboard fixture
+
+`dashboard-acme-board-raw.json` is the board-wide file the dashboard pipeline
+reads: every case's tickets pooled into one, because the dashboard fetches the
+whole board at once rather than one status at a time. Pooling also gives it the
+thing no single report has — tickets spread across several columns, which is the
+entire point of the scatter.
+
+Some of those tickets sit in columns the fixture board no longer declares. That
+is deliberate: a status can be removed from a board while tickets are still in
+it, and dropping them would quietly shrink the total. They are drawn after the
+declared columns and flagged `off_board`.
+
+It has its own golden, generated the same way as the report ones.
+
+## Derived files are not fixtures
+
+Running `build_fixtures.py --update-goldens` leaves `*-view-model.json` files in
+`fixtures/workspace/cache/`. They are gitignored, so a clean checkout and CI
+never see them — but `copytree` does, and then every report has data no matter
+what a test's `PREBUILD_REPORTS` says.
+
+That is the worst shape of test bug: green on the machine that generated the
+goldens, different on a clean checkout. The browser harness therefore deletes
+them after copying, so every run starts from the committed raw files and builds
+only what it asked for.
+
+The nested `fixtures/workspace/.gitignore` is committed for a related reason.
+`workspace.ensure()` writes one there on first run that excludes `cache/`, which
+is right for a real installation and wrong here, where the raw files *are* the
+fixture. `ensure()` only writes it when it is missing, so the committed one is
+what stops it. Delete that file and the next fixture added silently never gets
+committed.
+
 ## Goldens
 
 A golden is a saved copy of correct output. A test runs `normalize` and compares
@@ -134,6 +168,21 @@ lines in the harness.
 The stub raises on a query it does not recognise rather than returning an empty
 result, so teaching it about a new call is a clear error rather than a confusing
 assertion failure three layers away.
+
+### The stub is a contract, not a convenience
+
+`fake_github.py` has to answer with the same *shape* the real API does, not just
+enough to get past the next line. Two bugs came from it not doing so:
+
+- Its items response had no `pageInfo`, so browser tests never walked the
+  pagination loop from #1 — they took a path the tool never takes in life.
+- It answered the dashboard's board query without `number`, `title` or node
+  `id`s, which the report form's filter preview happens not to need. The
+  dashboard did, and failed inside the server rather than in the stub.
+
+Both surfaced as errors three layers from the cause. When a new caller reuses a
+query shape, check the stub answers everything *that* caller reads, not only
+what the first one did.
 
 ### Waiting
 

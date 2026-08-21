@@ -506,6 +506,36 @@ class ProjectDashboard(BrowserTest):
         heading = self.page.locator("#scope-project-fixed")
         expect(heading).to_have_count(1)
 
+    def test_the_report_sections_keep_their_spacing(self):
+        """Wrapping the report in a view silently removed the gaps.
+
+        The sections were direct children of `.wrap` and took the column gap
+        from it. Putting a view between them made them grandchildren, so the
+        gap stopped applying and the filter, stat tiles and chart ran together
+        with nothing to separate them. Nothing errored -- it just looked wrong,
+        which is why it wants a test rather than a careful eye.
+        """
+        self.page.click('.report-link[data-slug="baseline"]')
+        expect(self.page.locator("#stats")).to_be_visible()
+
+        measured = self.page.evaluate("""() => {
+          const stats = document.getElementById('stats');
+          const chart = stats.nextElementSibling;
+          return Math.round(chart.getBoundingClientRect().top
+                            - stats.getBoundingClientRect().bottom);
+        }""")
+        self.assertGreater(measured, 8,
+                           "the stat tiles and the chart are touching")
+
+    def test_the_hidden_view_stays_hidden(self):
+        # Giving the views `display: flex` for that gap would otherwise beat the
+        # hidden attribute and render both at once.
+        expect(self.page.locator("#dashboard-view")).to_be_hidden()
+        self.assertEqual(
+            self.page.evaluate(
+                "getComputedStyle(document.getElementById('dashboard-view')).display"),
+            "none")
+
     def test_opening_the_dashboard_replaces_the_report(self):
         self.page.click("#dashboard-link")
         expect(self.page.locator("#dashboard-view")).to_be_visible()

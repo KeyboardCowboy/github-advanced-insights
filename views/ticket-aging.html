@@ -89,8 +89,19 @@
   /* The shell is a flex row only when the sidebar is present (app mode);
      with the sidebar hidden the wrap centres exactly as it does standalone. */
   .shell { display: flex; gap: 28px; align-items: flex-start; max-width: 1320px; margin: 0 auto; }
+  /* One gap value shared by .wrap and the two views inside it. The sections
+     used to be direct children of .wrap and picked the gap up from it; now a
+     view sits between them, so the view has to carry the same spacing. Kept as
+     a variable so the two cannot drift apart. */
+  :root { --view-gap: 28px; }
   .wrap { flex: 1; min-width: 0; max-width: 1000px; margin: 0 auto;
-          display: flex; flex-direction: column; gap: 28px; }
+          display: flex; flex-direction: column; gap: var(--view-gap); }
+  #report-view, #dashboard-view {
+    display: flex; flex-direction: column; gap: var(--view-gap);
+  }
+  /* `display` above would otherwise override the hidden attribute and show
+     both views at once. */
+  #report-view[hidden], #dashboard-view[hidden] { display: none; }
 
   .sidebar {
     flex: 0 0 236px; width: 236px; position: sticky;

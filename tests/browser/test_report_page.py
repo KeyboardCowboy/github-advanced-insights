@@ -272,5 +272,107 @@ class RememberedScope(BrowserTest):
         self.assertIsNone(stored["project"], stored)
 
 
+class ReorderingReports(BrowserTest):
+    """Dragging and Alt+arrow both reorder, and both persist (#14).
+
+    Ordering previously meant opening each report's form and editing a relative
+    integer, which is a poor way to express "this one goes above that one".
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def slugs(self):
+        return self.page.locator(".report-link").evaluate_all(
+            "els => els.map(e => e.dataset.slug)")
+
+    def order_on_disk(self):
+        """What the definitions say, which is the thing that has to change."""
+        definitions = {}
+        for path in (self.workspace / "definitions").glob("*.json"):
+            definitions[path.stem] = json.loads(path.read_text())["order"]
+        return [slug for slug, _ in sorted(definitions.items(), key=lambda kv: (kv[1], kv[0]))]
+
+    def test_the_links_advertise_that_they_can_be_dragged(self):
+        expect(self.page.locator('.report-link[draggable="true"]')).to_have_count(6)
+
+    def test_dragging_a_report_upwards_moves_it(self):
+        # Source and target come from the list as it stands. The class shares
+        # one workspace, so naming fixed slugs would make this pass or fail
+        # depending on what an earlier test left behind.
+        before = self.slugs()
+        last, first = before[-1], before[0]
+        self.page.locator(f'.report-link[data-slug="{last}"]').drag_to(
+            self.page.locator(f'.report-link[data-slug="{first}"]'))
+
+        expect(self.page.locator(".report-link").first).to_have_attribute(
+            "data-slug", last)
+        self.assertNotEqual(self.slugs(), before)
+
+    def test_a_drag_is_persisted_not_just_drawn(self):
+        # The whole point: it has to survive the page, which is what editing the
+        # order field by hand used to be for.
+        before = self.slugs()
+        last, first = before[-1], before[0]
+        self.page.locator(f'.report-link[data-slug="{last}"]').drag_to(
+            self.page.locator(f'.report-link[data-slug="{first}"]'))
+        expect(self.page.locator(".report-link").first).to_have_attribute(
+            "data-slug", last)
+
+        self.assertEqual(self.order_on_disk()[0], last)
+        self.goto("/")
+        self.assertEqual(self.slugs()[0], last)
+
+    def test_alt_arrow_reorders_without_a_pointer(self):
+        """Drag is the only other way in, which excludes keyboard users.
+
+        Alt rather than a bare arrow, because the plain arrows already move
+        between reports.
+        """
+        second = self.slugs()[1]
+        self.page.locator(f'.report-link[data-slug="{second}"]').focus()
+        self.page.keyboard.press("Alt+ArrowUp")
+
+        expect(self.page.locator(".report-link").first).to_have_attribute(
+            "data-slug", second)
+        self.assertEqual(self.order_on_disk()[0], second)
+
+    def test_alt_arrow_keeps_focus_on_the_report_that_moved(self):
+        # The list is redrawn, so the focused element is destroyed underneath
+        # the keystroke. Losing focus to the body would end the interaction
+        # after one press.
+        second = self.slugs()[1]
+        self.page.locator(f'.report-link[data-slug="{second}"]').focus()
+        self.page.keyboard.press("Alt+ArrowUp")
+
+        expect(self.page.locator(".report-link").first).to_have_attribute(
+            "data-slug", second)
+        self.assertEqual(
+            self.page.evaluate("document.activeElement.dataset.slug"), second)
+
+    def test_alt_arrow_at_the_end_of_the_list_does_nothing(self):
+        before = self.slugs()
+        self.page.locator(f'.report-link[data-slug="{before[0]}"]').focus()
+        self.page.keyboard.press("Alt+ArrowUp")
+        self.assertEqual(self.slugs(), before)
+        self.assertNoPageErrors()
+
+    def test_reordering_does_not_change_which_report_is_open(self):
+        # Moving a report in the list is not a request to read it.
+        self.page.click('.report-link[data-slug="overflow"]')
+        expect(self.page.locator(
+            '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
+
+        first = self.slugs()[0]
+        self.page.locator(f'.report-link[data-slug="{first}"]').focus()
+        self.page.keyboard.press("Alt+ArrowDown")
+
+        expect(self.page.locator(
+            '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
+
+
 if __name__ == "__main__":
     unittest.main()

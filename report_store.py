@@ -154,6 +154,51 @@ def save_report(slug, values, is_new):
     return stored
 
 
+# Gaps between neighbours, so a later hand-edit can slot a report between two
+# without renumbering the rest.
+ORDER_STEP = 10
+
+
+def reorder_reports(slugs):
+    """Renumber `order` across every definition, in the sequence given.
+
+    Takes the whole list rather than the visible subset. The sidebar shows one
+    board at a time, so a subset would have to guess what happens to the
+    reports it cannot see -- and any guess interleaves them somewhere the
+    person dragging never looked.
+
+    Only `order` is touched. Everything else in the file is left exactly as it
+    was, since reordering is not an edit of what a report measures.
+    """
+    known = set(existing_slugs())
+    given = list(slugs)
+
+    if len(given) != len(set(given)):
+        raise ValueError("The same report appears twice in the new order.")
+    unknown = [slug for slug in given if slug not in known]
+    if unknown:
+        raise ValueError(f"No report called '{unknown[0]}'.")
+    if set(given) != known:
+        # A report added or deleted in another tab since this page loaded.
+        # Renumbering anyway would drop it to an arbitrary position.
+        missing = sorted(known - set(given))
+        raise ValueError(
+            f"The new order is missing {len(missing)} report(s): "
+            f"{', '.join(missing)}. Reload and try again."
+        )
+
+    written = {}
+    for index, slug in enumerate(given):
+        stored = load_raw(slug) or {}
+        stored["order"] = (index + 1) * ORDER_STEP
+        path = REPORTS_DIR / f"{slug}.json"
+        temp_path = path.with_suffix(".json.tmp")
+        temp_path.write_text(json.dumps(stored, indent=2, ensure_ascii=False) + "\n")
+        os.replace(temp_path, path)
+        written[slug] = stored["order"]
+    return written
+
+
 def delete_report(slug):
     """Remove a definition and the cache files derived from it."""
     path = REPORTS_DIR / f"{slug}.json"

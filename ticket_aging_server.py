@@ -10,6 +10,7 @@ anything, but a page served from here can.
   GET  /api/reports                 every definition + its cache freshness
   GET  /api/reports/<slug>          one cached view model
   POST /api/definitions            create a report, refusing a taken slug
+  PUT  /api/reports/order          renumber every report in the order given
   POST /api/reports/<slug>/refresh  run the pipeline, return the new model
 
 The page works in either context, and decides which at load: if /api/reports
@@ -59,6 +60,7 @@ from markup import render as render_markup
 from report_store import (
     delete_report,
     load_raw,
+    reorder_reports,
     save_report,
     slug_from_title,
 )
@@ -252,6 +254,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_json(
                     {"error": "invalid", "problems": str(exc).splitlines()}, status=400
                 )
+
+        if self.path == "/api/reports/order":
+            values = self.read_json_body()
+            if values is None:
+                return
+            try:
+                written = reorder_reports(values.get("slugs") or [])
+            except ValueError as exc:
+                return self.send_json(
+                    {"error": "invalid", "message": str(exc)}, status=409)
+            return self.send_json({"order": written})
 
         match = re.fullmatch(r"/api/definitions/([^/]+)", self.path)
         if match:

@@ -108,6 +108,12 @@
     transition: background .12s ease, border-color .12s ease;
   }
   .report-link:hover { background: var(--surface-2); }
+  .report-link { cursor: grab; }
+  .report-link.dragging { opacity: .4; cursor: grabbing; }
+  /* A line where the report would land, rather than moving the list around
+     under the pointer: the row being dragged is the one the eye is following. */
+  .report-link.drop-above { box-shadow: inset 0 2px 0 0 var(--series); }
+  .report-link.drop-below { box-shadow: inset 0 -2px 0 0 var(--series); }
   #scope-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   #scope-filters:empty { display: none; }
   .scope { display: flex; flex-direction: column; gap: 4px; }
@@ -758,8 +764,10 @@
 
   function drawSidebar() {
     const link = report => `
-      <button type="button" class="report-link" data-slug="${escapeHtml(report.slug)}"
-              aria-current="${report.slug === currentSlug}">
+      <button type="button" class="report-link" draggable="true"
+              data-slug="${escapeHtml(report.slug)}"
+              aria-current="${report.slug === currentSlug}"
+              title="Drag to reorder, or Alt+Up / Alt+Down">
         <span class="name">${escapeHtml(report.title)}</span>
         <span class="sub">${report.count === null ? "not fetched"
           : `${report.count} tickets`} &middot; ${escapeHtml(relativeAge(report.updated_iso))}</span>
@@ -774,7 +782,119 @@
 
     $("report-links").querySelectorAll(".report-link").forEach(button => {
       button.addEventListener("click", () => selectReport(button.dataset.slug));
+      button.addEventListener("dragstart", onDragStart);
+      button.addEventListener("dragover", onDragOver);
+      button.addEventListener("drop", onDrop);
+      button.addEventListener("dragend", onDragEnd);
+      button.addEventListener("keydown", onReorderKey);
     });
+  }
+
+  // ----------------------------------------------------------------------
+  // Reordering
+  // ----------------------------------------------------------------------
+
+  let draggingSlug = null;
+
+  /** The full order, with `slug` lifted out and dropped next to `neighbour`.
+   *
+   *  Computed across every report, not just the visible ones. The sidebar shows
+   *  one board at a time, so moving within that view still has to say where the
+   *  report sits among the ones off screen -- otherwise the reports nobody was
+   *  looking at get renumbered into arbitrary positions.
+   */
+  function orderWith(slug, neighbour, after) {
+    const slugs = summaries.map(r => r.slug).filter(s => s !== slug);
+    const at = slugs.indexOf(neighbour);
+    if (at === -1) return null;
+    slugs.splice(after ? at + 1 : at, 0, slug);
+    return slugs;
+  }
+
+  async function applyOrder(slugs) {
+    if (!slugs) return;
+    const response = await fetch("/api/reports/order", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slugs })
+    });
+    if (!response.ok) {
+      // Most likely another tab added or deleted a report, so this page is
+      // renumbering a list that no longer describes what is on disk.
+      const payload = await response.json().catch(() => ({}));
+      return setNote(payload.message || "Could not save the new order.", true);
+    }
+    // Re-sort in place rather than refetching: the server assigned the order
+    // this page just asked for, so a round trip would only confirm it.
+    const position = new Map(slugs.map((s, index) => [s, index]));
+    summaries.sort((a, b) => position.get(a.slug) - position.get(b.slug));
+    drawSidebar();
+    setNote("order saved");
+  }
+
+  function onDragStart(event) {
+    draggingSlug = event.currentTarget.dataset.slug;
+    event.dataTransfer.effectAllowed = "move";
+    // Firefox ignores a drag that carries no data.
+    event.dataTransfer.setData("text/plain", draggingSlug);
+    event.currentTarget.classList.add("dragging");
+  }
+
+  function onDragOver(event) {
+    if (!draggingSlug) return;
+    event.preventDefault();            // without this the drop never fires
+    event.dataTransfer.dropEffect = "move";
+    const target = event.currentTarget;
+    if (target.dataset.slug === draggingSlug) return;
+    // Which half of the row the pointer is over decides above or below, so a
+    // short drag onto a neighbour does what it looks like it should.
+    const box = target.getBoundingClientRect();
+    const below = event.clientY > box.top + box.height / 2;
+    target.classList.toggle("drop-below", below);
+    target.classList.toggle("drop-above", !below);
+  }
+
+  async function onDrop(event) {
+    event.preventDefault();
+    const target = event.currentTarget;
+    const neighbour = target.dataset.slug;
+    const below = target.classList.contains("drop-below");
+    clearDropMarks();
+    if (draggingSlug && neighbour !== draggingSlug) {
+      await applyOrder(orderWith(draggingSlug, neighbour, below));
+    }
+    draggingSlug = null;
+  }
+
+  function onDragEnd() {
+    draggingSlug = null;
+    clearDropMarks();
+  }
+
+  function clearDropMarks() {
+    $("report-links").querySelectorAll(".report-link").forEach(button =>
+      button.classList.remove("dragging", "drop-above", "drop-below"));
+  }
+
+  /** Alt+Up / Alt+Down, so reordering does not require a pointer.
+   *
+   *  Dragging is the only way to do this otherwise, which rules it out for
+   *  keyboard and screen-reader users entirely. Alt is used because the plain
+   *  arrows already move between reports.
+   */
+  async function onReorderKey(event) {
+    if (!event.altKey || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+    event.preventDefault();
+
+    const slug = event.currentTarget.dataset.slug;
+    const shown = visibleSummaries().map(r => r.slug);
+    const at = shown.indexOf(slug);
+    const to = event.key === "ArrowUp" ? at - 1 : at + 1;
+    if (at === -1 || to < 0 || to >= shown.length) return;
+
+    await applyOrder(orderWith(slug, shown[to], event.key === "ArrowDown"));
+    // The list was redrawn, so the button this fired on is gone; follow it.
+    const moved = $("report-links").querySelector(`[data-slug="${slug}"]`);
+    if (moved) moved.focus();
   }
 
   function setNote(message, isError) {

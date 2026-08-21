@@ -126,6 +126,13 @@
     border: 1px solid var(--border); border-radius: 5px; padding: 7px 9px; width: 100%;
   }
   .scope select:focus { outline: 2px solid var(--series); outline-offset: 1px; }
+  /* The single-option case. Sized and spaced like the select it replaces so the
+     sidebar keeps its shape, but flat and unbordered: it is a statement of what
+     you are looking at, not a control that failed to open. */
+  .scope-fixed {
+    font-size: 13px; color: var(--ink); padding: 7px 9px; margin: 0;
+    border: 1px solid transparent; border-radius: 5px; background: var(--surface-2);
+  }
   .create-link {
     display: block; margin-top: 8px; padding: 9px 12px; border-radius: 5px;
     font-size: 13px; font-weight: 500; text-align: left;
@@ -682,13 +689,17 @@
     localStorage.setItem(SCOPE_KEY, JSON.stringify(scope));
   }
 
-  /** Restore a remembered filter, dropping anything it names that is now gone.
+  /** Restore a remembered scope, dropping anything it names that is now gone.
    *
    *  Settings can delete or rename an account or project between visits, and a
-   *  filter naming one that no longer exists matches nothing -- the sidebar
+   *  scope naming one that no longer exists matches nothing -- the sidebar
    *  would come back empty with nothing on screen to explain why. So each half
-   *  is checked against what the current reports actually reference, and falls
-   *  back to "All" on its own rather than dragging the other one down with it.
+   *  is checked against what the current reports actually reference, and drops
+   *  on its own rather than dragging the other one down with it.
+   *
+   *  A dropped board leaves `scope.project` null, which no longer means "all":
+   *  it means "not decided yet". boot() resolves it to the board of the report
+   *  it is about to show.
    */
   function restoreScope() {
     let saved;
@@ -706,37 +717,66 @@
   function drawScopeFilters() {
     const accounts = [...new Map(summaries.map(r =>
       [r.account, r.account_label])).entries()];
-    // A filter over one value tells the reader nothing, so it stays hidden
-    // until there is an actual choice to make.
+    // With one value there is nothing to choose, so the filter is not a filter.
+    // It still gets shown, as a label -- see readout below.
     if (accounts.length < 2) scope.account = null;
 
     const inAccount = summaries.filter(r =>
       !scope.account || r.account === scope.account);
     const projects = [...new Map(inAccount.map(r =>
       [r.project, r.project_label])).entries()];
-    if (projects.length < 2) scope.project = null;
+    // With one board, that board *is* the scope rather than an absence of one,
+    // so it is selected rather than cleared. Same visible result, but it keeps
+    // scope.project meaning "the board on screen" in every case.
+    if (projects.length === 1) scope.project = projects[0][0];
+    else if (projects.length === 0) scope.project = null;
+    else if (!projects.some(([value]) => value === scope.project)) {
+      // The account changed underneath it, so the remembered board is not on
+      // offer any more. First in board order rather than none.
+      scope.project = projects[0][0];
+    }
 
+    // "All" belongs to Account and not to Project. A report's title says which
+    // column it measures, never which board it came from, so pooling several
+    // boards produces a list whose entries cannot be told apart -- the reader
+    // sees two "In Progress" reports and no way to know which is which.
     const control = (key, label, entries) => `
       <div class="scope">
         <label for="scope-${key}">${label}</label>
         <select id="scope-${key}">
-          <option value="">All</option>
+          ${key === "account" ? `<option value="">All</option>` : ""}
           ${entries.map(([value, text]) =>
             `<option value="${escapeHtml(value)}"${scope[key] === value ? " selected" : ""}>`
             + `${escapeHtml(text)}</option>`).join("")}
         </select>
       </div>`;
 
+    // One option used to render nothing at all, which left the reader with no
+    // statement of which board they were looking at -- and the sidebar changed
+    // shape depending on how many accounts happened to be configured. Naming
+    // the single value costs one line and answers the question directly.
+    const readout = (key, label, [, text]) => `
+      <div class="scope">
+        <label>${label}</label>
+        <p class="scope-fixed" id="scope-${key}-fixed">${escapeHtml(text)}</p>
+      </div>`;
+
+    const half = (key, label, entries) =>
+      entries.length > 1 ? control(key, label, entries)
+      : entries.length === 1 ? readout(key, label, entries[0])
+      : "";   // nothing configured yet; the empty state belongs to the sidebar
+
     $("scope-filters").innerHTML =
-      (accounts.length > 1 ? control("account", "Account", accounts) : "")
-      + (projects.length > 1 ? control("project", "Project", projects) : "");
+      half("account", "Account", accounts) + half("project", "Project", projects);
 
     for (const key of ["account", "project"]) {
       const select = $(`scope-${key}`);
       if (!select) continue;
       select.addEventListener("change", async () => {
         scope[key] = select.value || null;
-        // Narrowing the account can orphan the project selection.
+        // Narrowing the account orphans the board, and there is no "All" to
+        // fall back to. Cleared here and re-chosen by drawScopeFilters, which
+        // knows which boards the new account actually offers.
         if (key === "account") scope.project = null;
         drawScopeFilters();
         drawSidebar();
@@ -975,14 +1015,23 @@
       ? remembered
       : summaries[0]?.slug;
 
-    // A remembered filter can hide the remembered report. Something has to
-    // give, and it should be the filter: the report someone was last reading
-    // is the thing they came back for, while a narrowing set on an earlier
-    // visit is easy to have forgotten. Losing the report instead would look
-    // like it had been deleted.
-    if (initial && !visibleSummaries().some(r => r.slug === initial)) {
-      scope.account = null;
-      scope.project = null;
+    // A remembered scope can hide the remembered report. Something has to give,
+    // and it should be the scope: the report someone was last reading is what
+    // they came back for, while a narrowing set on an earlier visit is easy to
+    // have forgotten. Losing the report instead would look like it had been
+    // deleted.
+    //
+    // The scope now moves to that report's board rather than opening up to
+    // everything, since there is no "all boards" to fall back to. Same
+    // principle, one fewer state.
+    const initialReport = summaries.find(r => r.slug === initial);
+    if (initialReport
+        && (!scope.project || !visibleSummaries().some(r => r.slug === initial))) {
+      scope.project = initialReport.project;
+      // An account filter naming someone else would contradict the board.
+      if (scope.account && scope.account !== initialReport.account) {
+        scope.account = null;
+      }
       saveScope();
     }
 

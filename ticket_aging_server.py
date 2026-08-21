@@ -18,7 +18,7 @@ answers, it runs as an app with a report sidebar and a refresh button; if not
 -- as in a published artifact -- it falls back to the view model baked into its
 data island. One template, two contexts.
 
-Refreshing shells out to `gh`, so this binds to 127.0.0.1 only and is not
+Refreshing shells out to `gh`, so this binds to 127.0.0.1 by default and is not
 intended to be exposed to a network.
 
 Usage:
@@ -646,18 +646,30 @@ def main():
         "--port", type=int, default=int(os.environ.get("PORT") or 8080),
         help="Port to listen on. Defaults to $PORT, then 8080.",
     )
+    parser.add_argument(
+        "--host", default=os.environ.get("GH_INSIGHTS_HOST") or "127.0.0.1",
+        help="Address to bind. Defaults to 127.0.0.1, which is the only "
+             "address that keeps this off the network. Override only for a "
+             "throwaway environment holding no real credentials.",
+    )
     args = parser.parse_args()
 
     # A fresh clone has no workspace; create it rather than failing, so the
     # first run lands on the settings page instead of a stack trace.
     workspace.ensure()
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
     slugs = available_slugs()
     boards = list_projects()
 
     print(f"\nWork Item Age by Status — http://localhost:{args.port}")
     print(f"  workspace: {workspace.describe()}")
+    if args.host != "127.0.0.1":
+        # Anyone who can reach this port can drive the settings pages, and
+        # refreshing a report spends the credentials of whichever account the
+        # board is configured with. Worth saying out loud every time.
+        print(f"  ! Bound to {args.host}, not just this machine. Anyone who can "
+              f"reach it can use the accounts configured here.")
     if boards:
         for board in boards:
             source = describe_source(get_account(board.get("account")))

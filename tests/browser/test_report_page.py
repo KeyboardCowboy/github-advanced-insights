@@ -322,8 +322,10 @@ class SingleOptionReadout(BrowserTest):
         expect(self.page.locator("#scope-project")).to_have_count(0)
 
     def test_the_label_is_still_there(self):
-        labels = self.page.locator("#scope-filters label").all_text_contents()
-        self.assertIn("Project", labels)
+        # A heading since #43 gave the sidebar a real outline, but the point is
+        # unchanged: the reader is told which half of the scope this names.
+        headings = self.page.locator("#scope-filters h2").all_text_contents()
+        self.assertIn("Project", headings)
 
     def test_the_reports_are_not_filtered_by_it(self):
         # The readout describes the scope; it does not narrow anything, because
@@ -474,6 +476,135 @@ class ReorderingReports(BrowserTest):
 
         expect(self.page.locator(
             '.report-link[data-slug="overflow"][aria-current="true"]')).to_have_count(1)
+
+
+class ProjectDashboard(BrowserTest):
+    """A board-level view sitting above the reports (#43).
+
+    Every report answers "how long has work waited in *this* column". The
+    questions that cut across columns have no column to belong to, so they get
+    a view of their own rather than a sixth report.
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+
+    def test_the_sidebar_outline_says_what_is_under_what(self):
+        """Account and Project name the board; Dashboard and Reports are the
+        two ways to look at it, so they sit a level below."""
+        outline = self.page.locator(".sidebar h2, .sidebar h3").evaluate_all(
+            "els => els.map(e => e.tagName + ':' + e.textContent.trim())")
+        self.assertEqual(outline,
+                         ["H2:Account", "H2:Project", "H3:Dashboard", "H3:Reports"])
+
+    def test_the_board_selector_is_still_named_for_assistive_tech(self):
+        # The visible text became a heading, which would otherwise take the
+        # control's accessible name away with it.
+        heading = self.page.locator("#scope-project-fixed")
+        expect(heading).to_have_count(1)
+
+    def test_the_report_sections_keep_their_spacing(self):
+        """Wrapping the report in a view silently removed the gaps.
+
+        The sections were direct children of `.wrap` and took the column gap
+        from it. Putting a view between them made them grandchildren, so the
+        gap stopped applying and the filter, stat tiles and chart ran together
+        with nothing to separate them. Nothing errored -- it just looked wrong,
+        which is why it wants a test rather than a careful eye.
+        """
+        self.page.click('.report-link[data-slug="baseline"]')
+        expect(self.page.locator("#stats")).to_be_visible()
+
+        measured = self.page.evaluate("""() => {
+          const stats = document.getElementById('stats');
+          const chart = stats.nextElementSibling;
+          return Math.round(chart.getBoundingClientRect().top
+                            - stats.getBoundingClientRect().bottom);
+        }""")
+        self.assertGreater(measured, 8,
+                           "the stat tiles and the chart are touching")
+
+    def test_the_hidden_view_stays_hidden(self):
+        # Giving the views `display: flex` for that gap would otherwise beat the
+        # hidden attribute and render both at once.
+        expect(self.page.locator("#dashboard-view")).to_be_hidden()
+        self.assertEqual(
+            self.page.evaluate(
+                "getComputedStyle(document.getElementById('dashboard-view')).display"),
+            "none")
+
+    def test_opening_the_dashboard_replaces_the_report(self):
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-view")).to_be_visible()
+        expect(self.page.locator("#report-view")).to_be_hidden()
+        expect(self.page.locator("#dashboard-title")).to_have_text(
+            "Acme Delivery overview")
+
+    def test_refresh_and_edit_are_hidden_on_the_dashboard(self):
+        # Both act on a single report, and there is no single report here.
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#controls")).to_be_hidden()
+
+    def test_choosing_a_report_comes_back_to_the_report_view(self):
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-view")).to_be_visible()
+
+        self.page.click('.report-link[data-slug="baseline"]')
+        expect(self.page.locator("#report-view")).to_be_visible()
+        expect(self.page.locator("#dashboard-view")).to_be_hidden()
+        expect(self.page.locator("#controls")).to_be_visible()
+
+    def test_the_dashboard_is_where_you_left_it(self):
+        # Same reasoning as the remembered report and scope: coming back from
+        # Settings should not undo a deliberate choice.
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-view")).to_be_visible()
+
+        self.goto("/settings")
+        self.goto("/")
+        expect(self.page.locator("#dashboard-view")).to_be_visible()
+        self.assertNoPageErrors()
+
+    def test_choosing_a_report_is_remembered_over_the_dashboard(self):
+        self.page.click("#dashboard-link")
+        self.page.click('.report-link[data-slug="baseline"]')
+        expect(self.page.locator("#report-view")).to_be_visible()
+
+        self.goto("/")
+        expect(self.page.locator("#report-view")).to_be_visible()
+        expect(self.page.locator("#dashboard-view")).to_be_hidden()
+
+
+class FooterNamesTheRightBoard(BrowserTest):
+    """The footer used to name one particular board, hardcoded.
+
+    It read `nyulh/ContentHub-Board` for every reader of every report -- wrong
+    for anyone but its author, and it carried an internal board name into
+    published pages and any shared HTML.
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    def test_it_names_the_board_the_report_came_from(self):
+        self.goto("/")
+        expect(self.page.locator("#footer")).to_have_text(
+            "Acme Delivery · ticket_aging.py")
+
+    def test_it_falls_back_to_the_tool_when_there_is_no_board_yet(self):
+        # A report that has never been fetched has no board title to show.
+        self.goto("/")
+        self.page.click('.report-link[data-slug="batch-day"]')
+        expect(self.page.locator("#footer")).to_have_text("ticket_aging.py")
+
+    def test_no_board_name_is_baked_into_the_page(self):
+        self.goto("/")
+        html = self.page.content()
+        for leaked in ("nyulh", "ContentHub"):
+            self.assertNotIn(leaked, html,
+                             "an internal board name reached the rendered page")
 
 
 if __name__ == "__main__":

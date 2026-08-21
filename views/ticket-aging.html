@@ -289,6 +289,16 @@
     letter-spacing: .1em; text-transform: uppercase; fill: var(--ink-3);
   }
   .threshold { stroke: var(--accent-rule); stroke-width: 1.5; stroke-dasharray: 3 3; }
+  .dot { fill: var(--series); fill-opacity: .78; stroke: var(--bg); stroke-width: 1; }
+  .dot:hover { fill-opacity: 1; }
+  /* Percentile lines sit behind the dots and read as reference, not as data. */
+  .band-line { stroke: var(--accent-rule); stroke-width: 1; stroke-dasharray: 4 4; }
+  .band-label {
+    font-family: var(--font-mono); font-size: 10px; fill: var(--ink-3);
+    letter-spacing: .06em;
+  }
+  .column-rule { stroke: var(--grid); stroke-width: 1; }
+  .column-empty { font-family: var(--font-mono); font-size: 10px; fill: var(--ink-3); }
   .threshold-label {
     font-family: var(--font-mono); font-size: 10.5px;
     fill: var(--accent-rule); letter-spacing: .04em;
@@ -405,9 +415,28 @@
       <p class="lede" id="dashboard-lede"></p>
     </header>
 
-    <section class="card notes">
-      <h3 class="section-title">Nothing here yet</h3>
-      <div class="info-panel" id="dashboard-empty"></div>
+    <p class="meta" id="dashboard-meta"></p>
+    <p class="meta" id="dashboard-controls">
+      <button type="button" class="refresh" id="dashboard-refresh">Refresh data</button>
+      <span class="refresh-note" id="dashboard-note"></span>
+    </p>
+    <p class="filter-line" id="dashboard-filter" hidden></p>
+
+    <section class="stats" id="dashboard-stats"></section>
+
+    <section class="card">
+      <div class="card-head">
+        <h3 class="section-title">Aging work in progress</h3>
+        <p class="card-sub" id="scatter-sub"></p>
+      </div>
+      <div class="chart-scroll"><svg id="scatter" viewBox="0 0 900 420" role="img"
+        aria-label="Scatter of every open ticket, by the column it is in and how
+                    long it has been there"></svg></div>
+    </section>
+
+    <section class="card notes" id="dashboard-notes">
+      <h3 class="section-title">Reading this correctly</h3>
+      <ul id="dashboard-note-list"></ul>
     </section>
   </section>
 
@@ -1001,7 +1030,166 @@
    *  has work waited in *this* column", and the questions that cut across
    *  columns have no column to belong to.
    */
-  function selectDashboard() {
+  /** The aging work-in-progress scatter.
+   *
+   *  One dot per ticket: the column it is in across the bottom, how long it has
+   *  been there up the side. The histograms answer that one column at a time;
+   *  this is the only view where an outlier anywhere in the workflow is visible
+   *  without knowing which report to open first.
+   */
+  function drawScatter(model) {
+    const svg = $("scatter");
+    svg.textContent = "";
+    const W = 900, H = 420;
+    const M = { top: 24, right: 54, bottom: 78, left: 46 };
+    const plotW = W - M.left - M.right;
+    const plotH = H - M.top - M.bottom;
+
+    // Headroom so the oldest dot is not clipped by the top of the plot, and a
+    // floor so a board where everything is new still draws a sane axis.
+    const yMax = Math.max(model.oldest * 1.1, 7);
+    const yScale = days => M.top + plotH - (days / yMax) * plotH;
+
+    const columns = model.columns;
+    const bandW = plotW / Math.max(columns.length, 1);
+
+    for (const tick of [0, yMax / 2, yMax]) {
+      svg.appendChild(el("line", {
+        class: "grid-line", x1: M.left, x2: M.left + plotW,
+        y1: yScale(tick), y2: yScale(tick)
+      }));
+      svg.appendChild(el("text", {
+        class: "tick", x: M.left - 10, y: yScale(tick) + 4, "text-anchor": "end"
+      }, Math.round(tick)));
+    }
+    svg.appendChild(el("text", {
+      class: "axis-title", x: M.left - 30, y: M.top - 10
+    }, "DAYS"));
+
+    // Percentile lines first, so dots sit on top of them rather than under.
+    for (const band of model.bands) {
+      const y = yScale(band.days);
+      svg.appendChild(el("line", {
+        class: "band-line", x1: M.left, x2: M.left + plotW, y1: y, y2: y
+      }));
+      svg.appendChild(el("text", {
+        class: "band-label", x: M.left + plotW + 6, y: y + 3
+      }, `${band.label} ${band.days.toFixed(0)}d`));
+    }
+
+    columns.forEach((column, index) => {
+      const centre = M.left + bandW * (index + 0.5);
+
+      if (index > 0) {
+        svg.appendChild(el("line", {
+          class: "column-rule", x1: M.left + bandW * index, x2: M.left + bandW * index,
+          y1: M.top, y2: M.top + plotH
+        }));
+      }
+
+      // Two lines of label: a column name long enough to matter is a column
+      // name too long to fit, and rotating them makes the axis unreadable.
+      const words = column.status.split(" ");
+      const half = Math.ceil(words.length / 2);
+      [words.slice(0, half).join(" "), words.slice(half).join(" ")]
+        .filter(Boolean)
+        .forEach((line, row) => svg.appendChild(el("text", {
+          class: "tick", x: centre, y: M.top + plotH + 20 + row * 13,
+          "text-anchor": "middle"
+        }, line)));
+      svg.appendChild(el("text", {
+        class: "tick", x: centre, y: M.top + plotH + 48, "text-anchor": "middle"
+      }, column.count ? `${column.count}` : ""));
+
+      if (!column.count) {
+        svg.appendChild(el("text", {
+          class: "column-empty", x: centre, y: M.top + plotH / 2, "text-anchor": "middle"
+        }, "empty"));
+        return;
+      }
+
+      column.tickets.forEach((ticket, position) => {
+        // Spread dots across the column rather than stacking them on the
+        // centre line, where equal ages would hide each other completely.
+        const spread = Math.min(bandW * 0.34, 42);
+        const offset = column.tickets.length === 1
+          ? 0
+          : ((position % 7) / 6 - 0.5) * 2 * spread;
+        const dot = el("circle", {
+          class: "dot", cx: centre + offset, cy: yScale(ticket.days), r: 5,
+          "data-number": ticket.number
+        });
+        dot.addEventListener("mouseenter", event => showDotTooltip(event, `
+          <div class="tt-head">#${ticket.number} &middot; `
+          + `${escapeHtml(ticket.days_display)} days in `
+          + `${escapeHtml(column.status)}</div>`
+          + `<div class="tt-list">${escapeHtml(ticket.title)}</div>`));
+        dot.addEventListener("mouseleave", hideTooltip);
+        svg.appendChild(dot);
+      });
+    });
+  }
+
+  function showDotTooltip(event, html) {
+    tooltip.innerHTML = html;
+    tooltip.style.opacity = "1";
+    const rect = event.target.getBoundingClientRect();
+    const x = event.clientX ?? rect.left + rect.width / 2;
+    const y = event.clientY ?? rect.top;
+    tooltip.style.left = Math.min(x + 14, window.innerWidth - 275) + "px";
+    tooltip.style.top = Math.max(y - 12, 8) + "px";
+  }
+
+  function renderDashboard(model) {
+    $("dashboard-meta").innerHTML =
+      `BOARD ${model.board.number} &middot; ${escapeHtml(model.board.title)}`
+      + ` / LAST UPDATED ${escapeHtml(model.updated_display)}`;
+    $("dashboard-filter").hidden = false;
+    $("dashboard-filter").innerHTML =
+      `<span class="key">Filter</span><span class="query">`
+      + `${escapeHtml(model.filter)}</span>`;
+
+    const oldest = model.columns.flatMap(c => c.tickets)
+      .sort((a, b) => b.days - a.days)[0];
+    const band = label => (model.bands.find(b => b.label === label) || {}).days;
+    $("dashboard-stats").innerHTML = [
+      ["Tickets", String(model.total), "", "open across every column"],
+      ["Median age", (band("p50") ?? 0).toFixed(1), "d", "half are younger"],
+      ["85th percentile", (band("p85") ?? 0).toFixed(1), "d", "the usual worst case"],
+      ["Oldest", (model.oldest || 0).toFixed(0), "d",
+       oldest ? `#${oldest.number}` : "nothing yet"],
+    ].map(([label, value, unit, note]) => `
+      <div class="stat">
+        <p class="stat-label">${escapeHtml(label)}</p>
+        <p class="stat-value">${escapeHtml(value)}<span class="unit">${unit}</span></p>
+        <p class="stat-note">${escapeHtml(note)}</p>
+      </div>`).join("");
+
+    $("scatter-sub").textContent =
+      `Every open ticket on the board, placed in the column it is in now and `
+      + `aged from the moment it got there. Dashed lines are percentiles across `
+      + `the whole board, not per column.`;
+    drawScatter(model);
+
+    const notes = [];
+    const offBoard = model.columns.filter(c => c.off_board && c.count);
+    if (offBoard.length) {
+      notes.push(`<strong>${offBoard.length} column(s) are no longer on the board.</strong> `
+        + `${offBoard.map(c => escapeHtml(c.status)).join(", ")} still hold tickets, `
+        + `so they are drawn after the board's own columns rather than dropped.`);
+    }
+    if (model.unknown.length) {
+      notes.push(`<strong>${model.unknown.length} ticket(s) could not be aged.</strong> `
+        + `Their board history predates GitHub's status events, so there is no `
+        + `move to measure from. They are left out of the chart rather than `
+        + `drawn at zero, which would read as brand new work.`);
+    }
+    notes.push("Ages are wall-clock days, including weekends.");
+    $("dashboard-note-list").innerHTML =
+      notes.map(note => `<li>${note}</li>`).join("");
+  }
+
+  async function selectDashboard() {
     localStorage.setItem(VIEW_KEY, "dashboard");
     $("dashboard-view").hidden = false;
     $("report-view").hidden = true;
@@ -1020,10 +1208,57 @@
     // whatever the scope says, and there is no report to name.
     $("footer").textContent =
       [board && board.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
-    $("dashboard-empty").innerHTML =
-      "<p>No charts on this dashboard yet. The first will be an aging "
-      + "work-in-progress scatter: every column across the bottom, one dot per "
-      + "ticket, age up the side.</p>";
+    await loadDashboard(board && board.project);
+  }
+
+  /** Fetch and draw the board-level view model, or say why there is none.
+   *
+   *  Never fetched is a normal state rather than an error -- the same reasoning
+   *  as a report that has never been refreshed -- so it shows the empty view
+   *  and points at the control that fixes it.
+   */
+  async function loadDashboard(projectId) {
+    if (!projectId) return dashboardEmpty("No board selected yet.");
+
+    const response = await fetch(`/api/dashboard/${encodeURIComponent(projectId)}`);
+    if (response.ok) return renderDashboard(await response.json());
+
+    const detail = await response.json().catch(() => ({}));
+    dashboardEmpty(detail.message || "This board has no dashboard data yet.");
+  }
+
+  function dashboardEmpty(message) {
+    $("dashboard-meta").textContent = "NO BOARD DATA";
+    $("dashboard-filter").hidden = true;
+    $("dashboard-stats").innerHTML = "";
+    $("scatter").textContent = "";
+    $("scatter-sub").textContent = message;
+    $("dashboard-note-list").innerHTML = "";
+  }
+
+  async function refreshDashboard() {
+    const button = $("dashboard-refresh");
+    const note = $("dashboard-note");
+    const board = visibleSummaries()[0];
+    if (!board) return;
+
+    button.disabled = true;
+    note.textContent = " fetching from GitHub...";
+    note.classList.remove("error");
+    try {
+      const response = await fetch(
+        `/api/dashboard/${encodeURIComponent(board.project)}/refresh`,
+        { method: "POST" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.message || "Refresh failed.");
+      renderDashboard(payload);
+      note.textContent = " up to date";
+    } catch (error) {
+      note.textContent = " " + error.message;
+      note.classList.add("error");
+    } finally {
+      button.disabled = false;
+    }
   }
 
   async function selectReport(slug) {
@@ -1097,6 +1332,7 @@
     summaries = (await response.json()).reports;
     $("sidebar").hidden = false;
     $("dashboard-link").addEventListener("click", selectDashboard);
+    $("dashboard-refresh").addEventListener("click", refreshDashboard);
     restoreScope();
 
     const remembered = localStorage.getItem(LAST_REPORT_KEY);

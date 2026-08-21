@@ -198,6 +198,45 @@ def empty():
 CASES = [baseline, no_entry_event, multi_repo, batch_day, overflow, empty]
 
 
+# The board's own Status options, in workflow order. The dashboard puts these
+# on the x-axis, so the order is part of the fixture rather than something
+# derived from whichever column happens to be busiest.
+BOARD_STATUSES = ["Todo/Ready", "In Progress", "Dev Done / Peer Review",
+                  "PR Validated", "Ready for QA", "Done"]
+
+
+def dashboard_raw():
+    """One board-wide file, pooling every case's tickets.
+
+    The dashboard fetches the whole board at once rather than one status at a
+    time, so its fixture is the union of the per-report ones. Pooling them also
+    gives it what no single report has: tickets spread across several columns,
+    which is the entire point of the chart.
+
+    Some fixture tickets sit in columns the board no longer declares. That is
+    deliberate -- a status can be removed while tickets are still in it, and
+    dropping those would quietly shrink the total.
+    """
+    pooled = {
+        "fetched_at": FETCHED_AT,
+        "project": PROJECT_ID,
+        "project_label": "Acme Delivery",
+        "board": BOARD,
+        "filter": "is:open -type:Epic,Feature",
+        "statuses": BOARD_STATUSES,
+        "issue_ids": [],
+        "timelines": {},
+    }
+    for case in CASES:
+        _, raw_data, _ = case()
+        for issue_id in raw_data["issue_ids"]:
+            if issue_id in pooled["timelines"]:
+                continue
+            pooled["issue_ids"].append(issue_id)
+            pooled["timelines"][issue_id] = raw_data["timelines"][issue_id]
+    return pooled
+
+
 EXPECTED = FIXTURES / "expected"
 REPO_ROOT = FIXTURES.parent.parent
 
@@ -220,6 +259,18 @@ def update_goldens(slugs):
         produced = WORKSPACE / "cache" / f"{slug}-view-model.json"
         (EXPECTED / f"{slug}-view-model.json").write_text(produced.read_text())
         print(f"  golden updated: {slug}")
+
+    # The dashboard is a second pipeline over the same raw data, so it gets the
+    # same treatment: one golden covering every column, band and row at once.
+    result = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "dashboard.py"), "normalize", PROJECT_ID],
+        capture_output=True, text=True, env=env, cwd=REPO_ROOT)
+    if result.returncode != 0:
+        sys.exit(f"dashboard normalize failed:\n{result.stderr}")
+    produced = WORKSPACE / "cache" / f"dashboard-{PROJECT_ID}-view-model.json"
+    (EXPECTED / f"dashboard-{PROJECT_ID}-view-model.json").write_text(
+        produced.read_text())
+    print("  golden updated: dashboard")
 
 
 def main():
@@ -249,6 +300,12 @@ def main():
             json.dumps(raw_data, indent=2) + "\n")
         print(f"  {slug:<16} {len(raw_data['issue_ids'])} tickets")
         slugs.append(slug)
+
+    pooled = dashboard_raw()
+    (WORKSPACE / "cache" / f"dashboard-{PROJECT_ID}-raw.json").write_text(
+        json.dumps(pooled, indent=2) + "\n")
+    print(f"  {'dashboard':<16} {len(pooled['issue_ids'])} tickets "
+          f"across {len(pooled['statuses'])} declared columns")
 
     if "--update-goldens" in sys.argv:
         print()

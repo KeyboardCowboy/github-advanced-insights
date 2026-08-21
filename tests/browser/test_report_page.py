@@ -10,9 +10,12 @@ choice. So `prepare_workspace` builds the multi-account, multi-board situation
 those controls exist for.
 """
 import json
+import os
+import subprocess
+import sys
 import unittest
 
-from tests.browser.harness import BrowserTest, expect
+from tests.browser.harness import REPO_ROOT, BrowserTest, expect
 
 
 class ReportSwitching(BrowserTest):
@@ -605,6 +608,97 @@ class FooterNamesTheRightBoard(BrowserTest):
         for leaked in ("nyulh", "ContentHub"):
             self.assertNotIn(leaked, html,
                              "an internal board name reached the rendered page")
+
+
+class AgingScatter(BrowserTest):
+    """The dashboard's first chart (#10).
+
+    Every column across the bottom, one dot per ticket, age up the side. The
+    histograms answer that one column at a time; this is the only view where an
+    outlier anywhere in the workflow is visible without knowing which report to
+    open first.
+    """
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    @classmethod
+    def prepare_workspace(cls):
+        # The dashboard has its own normalize stage, over the board-wide raw
+        # file the fixtures ship.
+        subprocess.run(
+            [sys.executable, str(REPO_ROOT / "dashboard.py"), "normalize", "acme-board"],
+            cwd=REPO_ROOT, capture_output=True, text=True,
+            env={**os.environ, "GH_INSIGHTS_HOME": str(cls.workspace)}, check=True)
+
+    def setUp(self):
+        super().setUp()
+        self.goto("/")
+        self.page.click("#dashboard-link")
+        # The view unhides before its data arrives, so waiting on visibility
+        # alone reads an empty chart. Poll for something the render produces.
+        expect(self.page.locator("#scatter .dot").first).to_be_visible()
+
+    def test_one_dot_per_ticket(self):
+        model = json.loads(
+            (self.workspace / "cache" / "dashboard-acme-board-view-model.json").read_text())
+        expect(self.page.locator("#scatter .dot")).to_have_count(model["total"])
+
+    def test_columns_are_drawn_in_board_order(self):
+        labels = self.page.locator("#scatter text.tick").all_text_contents()
+        joined = " ".join(labels)
+        self.assertLess(joined.index("Todo/Ready"), joined.index("In Progress"),
+                        "the x-axis must follow the board, not the alphabet")
+        self.assertLess(joined.index("In Progress"), joined.index("Ready for"))
+
+    def test_percentile_lines_are_drawn_across_the_whole_board(self):
+        # Across the set rather than per column: a line per column needs every
+        # column to have a distribution, and small columns never do.
+        labels = self.page.locator("#scatter .band-label").all_text_contents()
+        self.assertEqual([l.split()[0] for l in labels], ["p50", "p85", "p95"])
+
+    def test_an_empty_column_says_so_rather_than_vanishing(self):
+        # A missing column would read as a column that does not exist, rather
+        # than one nothing is waiting in.
+        self.assertIn("empty",
+                      self.page.locator("#scatter .column-empty").all_text_contents())
+
+    def test_hovering_a_dot_names_the_ticket(self):
+        self.page.locator("#scatter .dot").first.hover()
+        tooltip = self.page.locator("#tooltip")
+        expect(tooltip).to_contain_text("days in")
+
+    def test_the_filter_is_shown_so_the_population_is_not_a_guess(self):
+        expect(self.page.locator("#dashboard-filter")).to_contain_text("is:open")
+
+    def test_retired_columns_are_explained_rather_than_dropped(self):
+        notes = self.page.locator("#dashboard-note-list").text_content()
+        self.assertIn("no longer on the board", notes)
+
+    def test_tickets_that_cannot_be_aged_are_explained(self):
+        notes = self.page.locator("#dashboard-note-list").text_content()
+        self.assertIn("could not be aged", notes)
+
+    def test_the_page_does_not_throw(self):
+        self.assertNoPageErrors()
+
+
+class ScatterWithoutData(BrowserTest):
+    """A board that has never been fetched for the dashboard."""
+
+    PREBUILD_REPORTS = ("baseline",)
+
+    @classmethod
+    def prepare_workspace(cls):
+        # Remove the board-wide raw file so there is nothing to normalize.
+        (cls.workspace / "cache" / "dashboard-acme-board-raw.json").unlink()
+
+    def test_it_says_so_instead_of_drawing_an_empty_chart(self):
+        self.goto("/")
+        self.page.click("#dashboard-link")
+        expect(self.page.locator("#dashboard-view")).to_be_visible()
+        expect(self.page.locator("#scatter-sub")).to_contain_text("never been fetched")
+        expect(self.page.locator("#scatter .dot")).to_have_count(0)
+        self.assertNoPageErrors()
 
 
 if __name__ == "__main__":

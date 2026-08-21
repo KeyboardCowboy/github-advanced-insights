@@ -9,6 +9,8 @@ anything, but a page served from here can.
   GET  /                            the interface (read live from views/)
   GET  /api/reports                 every definition + its cache freshness
   GET  /api/reports/<slug>          one cached view model
+  GET  /api/dashboard/<project>    the board-level view model
+  POST /api/dashboard/<project>/refresh  rebuild it from GitHub
   POST /api/definitions            create a report, refusing a taken slug
   PUT  /api/reports/order          renumber every report in the order given
   POST /api/reports/<slug>/refresh  run the pipeline, return the new model
@@ -56,6 +58,7 @@ from projects import (
     save_project,
     validate_project,
 )
+import dashboard
 from markup import render as render_markup
 from report_store import (
     delete_report,
@@ -222,6 +225,20 @@ class Handler(BaseHTTPRequestHandler):
                 "default_project": document.get("default_project"),
             })
 
+        match = re.fullmatch(r"/api/dashboard/([^/]+)", self.path)
+        if match:
+            project = get_project(match.group(1))
+            if project is None:
+                return self.send_json({"error": "not_found"}, status=404)
+            model_path = dashboard.cache_paths(project["id"])["model"]
+            if not model_path.exists():
+                return self.send_json(
+                    {"error": "not_cached", "project": project["id"],
+                     "message": "This board has never been fetched for the "
+                                "dashboard. Use Refresh."},
+                    status=404)
+            return self.send_json(json.loads(model_path.read_text()))
+
         if self.path == "/api/reports":
             return self.send_json({"reports": [report_summary(s) for s in available_slugs()]})
 
@@ -371,6 +388,21 @@ class Handler(BaseHTTPRequestHandler):
             if values is None:
                 return
             return self.send_json({"slug": slug_from_title(values.get("title", ""))})
+
+        match = re.fullmatch(r"/api/dashboard/([^/]+)/refresh", self.path)
+        if match:
+            project = get_project(match.group(1))
+            if project is None:
+                return self.send_json({"error": "not_found"}, status=404)
+            try:
+                return self.send_json(dashboard.refresh(project["id"]))
+            except GitHubError as exc:
+                return self.send_json(
+                    {"error": "unreachable", "message": str(exc)}, status=502)
+            except SystemExit as exc:
+                # The pipeline exits on bad configuration; a server must not.
+                return self.send_json(
+                    {"error": "invalid", "message": str(exc)}, status=400)
 
         match = re.fullmatch(r"/api/reports/([^/]+)/refresh", self.path)
         if not match:

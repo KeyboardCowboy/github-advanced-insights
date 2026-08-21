@@ -89,13 +89,39 @@
   /* The shell is a flex row only when the sidebar is present (app mode);
      with the sidebar hidden the wrap centres exactly as it does standalone. */
   .shell { display: flex; gap: 28px; align-items: flex-start; max-width: 1320px; margin: 0 auto; }
+  /* One gap value shared by .wrap and the two views inside it. The sections
+     used to be direct children of .wrap and picked the gap up from it; now a
+     view sits between them, so the view has to carry the same spacing. Kept as
+     a variable so the two cannot drift apart. */
+  :root { --view-gap: 28px; }
   .wrap { flex: 1; min-width: 0; max-width: 1000px; margin: 0 auto;
-          display: flex; flex-direction: column; gap: 28px; }
+          display: flex; flex-direction: column; gap: var(--view-gap); }
+  #report-view, #dashboard-view {
+    display: flex; flex-direction: column; gap: var(--view-gap);
+  }
+  /* `display` above would otherwise override the hidden attribute and show
+     both views at once. */
+  #report-view[hidden], #dashboard-view[hidden] { display: none; }
 
   .sidebar {
     flex: 0 0 236px; width: 236px; position: sticky;
     top: clamp(20px, 4vw, 56px); display: flex; flex-direction: column; gap: 6px;
   }
+  /* Account and Project are h2; Dashboard and Reports are h3 under them. The
+     indent and the size both carry that, so the structure reads the same to
+     someone skimming as it does to a screen reader walking the headings. */
+  .sidebar-section {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-3);
+    margin: 16px 0 6px; padding-left: 12px; font-weight: 500;
+  }
+  .section-link {
+    font: inherit; letter-spacing: inherit; text-transform: inherit;
+    color: var(--ink-2); background: none; border: 0; padding: 0;
+    cursor: pointer; text-align: left;
+  }
+  .section-link:hover { color: var(--ink); }
+  .section-link[aria-current="true"] { color: var(--series); }
   .sidebar-label {
     font-family: var(--font-mono); font-size: 10.5px; font-weight: 500;
     letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3);
@@ -117,9 +143,10 @@
   #scope-filters { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
   #scope-filters:empty { display: none; }
   .scope { display: flex; flex-direction: column; gap: 4px; }
-  .scope label {
-    font-family: var(--font-mono); font-size: 10px; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--ink-3); padding-left: 12px;
+  .scope-heading {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--ink-2); padding-left: 12px;
+    margin: 0; font-weight: 600;
   }
   .scope select {
     font: inherit; font-size: 13px; color: var(--ink); background: var(--surface);
@@ -357,15 +384,34 @@
 </header>
 
 <div class="shell">
-  <nav class="sidebar" id="sidebar" aria-label="Reports" hidden>
+  <!-- Account and Project name what you are looking at; Dashboard and Reports
+       are the two ways to look at it, so they sit a level below. The heading
+       levels say so rather than leaving it to indentation. -->
+  <nav class="sidebar" id="sidebar" aria-label="Board navigation" hidden>
     <div id="scope-filters"></div>
-    <p class="sidebar-label">Reports</p>
+    <h3 class="sidebar-section">
+      <button type="button" class="section-link" id="dashboard-link">Dashboard</button>
+    </h3>
+    <h3 class="sidebar-section">Reports</h3>
     <div id="report-links"></div>
     <a class="create-link" href="/report">+ Create a report</a>
     <a class="settings-link" href="/settings">Settings</a>
   </nav>
 
   <div class="wrap">
+  <section id="dashboard-view" hidden aria-labelledby="dashboard-title">
+    <header>
+      <h2 class="report-title" id="dashboard-title"></h2>
+      <p class="lede" id="dashboard-lede"></p>
+    </header>
+
+    <section class="card notes">
+      <h3 class="section-title">Nothing here yet</h3>
+      <div class="info-panel" id="dashboard-empty"></div>
+    </section>
+  </section>
+
+  <div id="report-view">
   <header>
     <p class="meta" id="meta"></p>
     <p class="meta" id="controls" hidden>
@@ -412,6 +458,8 @@
     <div class="info-panel" id="info-panel" hidden></div>
     <ul id="notes"></ul>
   </section>
+
+  </div>
 
   <footer id="footer"></footer>
   </div>
@@ -657,8 +705,11 @@
     info.innerHTML = copy.info_html || "";
     info.hidden = !copy.info_html;
 
+    // Derived, not hardcoded. This line named one particular board for every
+    // reader of every report, which was wrong for anyone but its author and
+    // put an internal board name into published pages and shared HTML.
     $("footer").textContent =
-      "nyulh/ContentHub-Board \u00b7 ticket_aging.py";
+      [header.board_title, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
   }
 
   // ======================================================================
@@ -667,6 +718,7 @@
   // ======================================================================
   const LAST_REPORT_KEY = "ticket-aging:last-report";
   const SCOPE_KEY = "ticket-aging:scope";
+  const VIEW_KEY = "ticket-aging:view";
   let summaries = [];
   let currentSlug = null;
 
@@ -742,8 +794,8 @@
     // sees two "In Progress" reports and no way to know which is which.
     const control = (key, label, entries) => `
       <div class="scope">
-        <label for="scope-${key}">${label}</label>
-        <select id="scope-${key}">
+        <h2 class="scope-heading" id="scope-${key}-heading">${label}</h2>
+        <select id="scope-${key}" aria-labelledby="scope-${key}-heading">
           ${key === "account" ? `<option value="">All</option>` : ""}
           ${entries.map(([value, text]) =>
             `<option value="${escapeHtml(value)}"${scope[key] === value ? " selected" : ""}>`
@@ -757,7 +809,7 @@
     // the single value costs one line and answers the question directly.
     const readout = (key, label, [, text]) => `
       <div class="scope">
-        <label>${label}</label>
+        <h2 class="scope-heading">${label}</h2>
         <p class="scope-fixed" id="scope-${key}-fixed">${escapeHtml(text)}</p>
       </div>`;
 
@@ -943,7 +995,43 @@
     note.classList.toggle("error", Boolean(isError));
   }
 
+  /** Show the board-level view instead of a single report.
+   *
+   *  A separate view rather than a sixth report: every report answers "how long
+   *  has work waited in *this* column", and the questions that cut across
+   *  columns have no column to belong to.
+   */
+  function selectDashboard() {
+    localStorage.setItem(VIEW_KEY, "dashboard");
+    $("dashboard-view").hidden = false;
+    $("report-view").hidden = true;
+    $("controls").hidden = true;   // Refresh and Edit belong to a report
+    $("dashboard-link").setAttribute("aria-current", "true");
+    drawSidebar();
+
+    const board = visibleSummaries()[0];
+    $("dashboard-title").textContent = board
+      ? `${board.project_label} overview` : "Board overview";
+    $("dashboard-lede").textContent =
+      "Everything on this board at once, rather than one column at a time. "
+      + "The reports below each measure a single status; this is where the "
+      + "questions that cut across all of them belong.";
+    // The report footer names the report's board; on this view the board is
+    // whatever the scope says, and there is no report to name.
+    $("footer").textContent =
+      [board && board.project_label, "ticket_aging.py"].filter(Boolean).join(" \u00b7 ");
+    $("dashboard-empty").innerHTML =
+      "<p>No charts on this dashboard yet. The first will be an aging "
+      + "work-in-progress scatter: every column across the bottom, one dot per "
+      + "ticket, age up the side.</p>";
+  }
+
   async function selectReport(slug) {
+    $("dashboard-view").hidden = true;
+    $("report-view").hidden = false;
+    $("controls").hidden = false;
+    $("dashboard-link").setAttribute("aria-current", "false");
+    localStorage.setItem(VIEW_KEY, "report");
     currentSlug = slug;
     localStorage.setItem(LAST_REPORT_KEY, slug);
     $("edit-link").href = `/report?slug=${encodeURIComponent(slug)}`;
@@ -1008,6 +1096,7 @@
 
     summaries = (await response.json()).reports;
     $("sidebar").hidden = false;
+    $("dashboard-link").addEventListener("click", selectDashboard);
     restoreScope();
 
     const remembered = localStorage.getItem(LAST_REPORT_KEY);
@@ -1036,10 +1125,18 @@
     }
 
     drawScopeFilters();
-    $("controls").hidden = false;
     $("refresh").addEventListener("click", refreshCurrent);
 
+    // Read before loading the report, because selectReport records that the
+    // report view is the current one -- checking afterwards would only ever
+    // see what this line just wrote.
+    const rememberedView = localStorage.getItem(VIEW_KEY);
+
+    // The report is loaded either way: the dashboard has no data of its own
+    // yet, and leaving currentSlug unset would make the sidebar look like
+    // nothing is selected underneath.
     if (initial) await selectReport(initial);
+    if (rememberedView === "dashboard") selectDashboard();
   }
 
   boot();

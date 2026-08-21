@@ -1,0 +1,77 @@
+# Tugboat builds a preview of this tool for every pull request.
+#
+# The point is to see UI changes before merging. Most of what changes here lives
+# in the sidebar, the settings pages and the report form -- all of which only
+# exist when the server is running -- so this runs the real application rather
+# than publishing a static build of one report.
+#
+# It is seeded with the synthetic test fixtures. That is deliberate: the preview
+# needs no GitHub token, reaches no network, and shows nobody's real board.
+# Preview URLs are easy to share, so anything sensitive in here would be a leak
+# waiting to happen.
+services:
+  app:
+    # Only service, so Tugboat makes it the default: it gets the repository
+    # checked out and receives the incoming requests.
+    image: tugboatqa/python:3.12
+
+    # The server's own default port. `default: true` would otherwise imply 80.
+    expose: 8080
+
+    commands:
+      # Set up the preview infrastructure. Runs once, on the base preview.
+      init:
+        # Nothing to install. The tool is standard library only, which is the
+        # property the test suite exists to keep true -- if this ever needs a
+        # pip install, something has drifted.
+        - python3 --version
+
+      # Import data. Also once, on the base preview.
+      update:
+        # The fixture workspace is read-only in the checkout and the tool writes
+        # to its workspace, so it gets a copy of its own.
+        - mkdir -p /var/lib/gh-insights
+        - cp -r "${TUGBOAT_ROOT}/tests/fixtures/workspace/." /var/lib/gh-insights/
+
+      # Build the site. Runs on every preview, including ones cloned from the
+      # base, so anything derived from the checked-out code belongs here.
+      build:
+        # Turn the fixture raw data into view models, so reports open with
+        # charts and tables rather than "never fetched". This is the real
+        # pipeline, not a canned file: a change that breaks normalize fails the
+        # preview build instead of showing a stale page.
+        - |
+          cd "${TUGBOAT_ROOT}"
+          for slug in $(ls tests/fixtures/workspace/definitions/*.json | xargs -n1 basename | sed 's/.json$//'); do
+            GH_INSIGHTS_HOME=/var/lib/gh-insights python3 ticket_aging.py normalize "$slug"
+          done
+
+      # Runs every time a preview starts, which is what a daemon needs: online,
+      # start and clone all run after the build snapshot, so a process launched
+      # during build would not survive into a cloned preview.
+      start:
+        - |
+          cd "${TUGBOAT_ROOT}"
+          GH_INSIGHTS_HOME=/var/lib/gh-insights \
+          GH_INSIGHTS_HOST=0.0.0.0 \
+          PORT=8080 \
+          nohup python3 -u ticket_aging_server.py > /var/log/gh-insights.log 2>&1 &
+
+      # Runs once the preview is up. Fails the build if the server never came
+      # up, rather than handing over a URL that answers nothing.
+      online:
+        - |
+          for attempt in $(seq 1 20); do
+            curl -fsS http://localhost:8080/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "server did not answer on 8080; last 50 log lines:"
+          tail -50 /var/log/gh-insights.log
+          exit 1
+
+    # Screenshotted and visually diffed against the base preview, so a change
+    # to any of these shows up as a picture on the pull request.
+    urls:
+      - /
+      - /settings
+      - /report

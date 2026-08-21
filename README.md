@@ -226,6 +226,23 @@ Put closing keywords like `Closes #12` in the pull request description rather th
 commit message; a squash merge can rewrite the commit, and the PR body is read at merge
 time either way.
 
+### Previews
+
+Every pull request gets a Tugboat preview running the real application, configured in
+[.tugboat/config.yml](.tugboat/config.yml). It is seeded with the synthetic test fixtures,
+so it needs no GitHub token, reaches no network, and shows nobody's real board — preview
+URLs are easy to share, and anything sensitive in one would be a leak waiting to happen.
+
+Refreshing a report in a preview will fail, because there are no credentials to refresh
+with. That is the intended trade.
+
+The preview binds the server to all interfaces via `GH_INSIGHTS_HOST`, which is safe only
+because that environment holds nothing real. **Do not set that variable on your own
+machine.** The default is `127.0.0.1`, and it is the default because refreshing a report
+spends the credentials of whichever account the board is configured with — anyone who can
+reach the port can do that, and can edit your accounts and boards from the settings page.
+The server prints a warning on every start when it is bound anywhere else.
+
 ### Issue types
 
 Issues use four types, applied automatically by the templates:
